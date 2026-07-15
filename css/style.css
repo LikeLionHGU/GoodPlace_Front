@@ -140,6 +140,33 @@
   gap: 12px;
 }
 .login-inputs[hidden] { display: none; } /* hidden 속성이 display:flex를 이기도록 */
+
+/* 전화번호 입력 + 오른쪽 인라인 전송/재전송 버튼 */
+.phone-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.phone-row input {
+  flex: 1;
+  min-width: 0;
+}
+.btn-send-inline {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: #C62827;
+  color: #fff;
+  font-family: "Pretendard", "Malgun Gothic", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-send-inline:hover {
+  background: #E8A29F;
+}
 .login-card input {
   width: 100%;
   box-sizing: border-box;
