@@ -316,13 +316,28 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translateY(-100%);
   cursor: pointer;
+  /* 세로 위치는 CustomOverlay의 yAnchor:1이 잡는다(핀 하단 끝=좌표).
+     여기서 translateY를 또 주면 이중 오프셋으로 핀이 좌표에서 떠 보인다. */
 }
 .vacancy-overlay .building {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 말풍선: 평소 숨김 → 핀에 마우스 올리면 표시. absolute라 마커 위치에 영향 없음.
+   핀 바로 아래(top:100%)에 가로 중앙 정렬로 뜬다. */
+.overlay-bubble {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 11;
+}
+.vacancy-overlay:hover .overlay-bubble {
+  display: block;
 }
 
 /* 빈 상가 / 공사 중 말풍선 툴팁 */
@@ -941,8 +956,8 @@ main {
 
 /* ===== AI 리포트 모달 ===== */
 .report-card {
-  width: min(460px, 92vw);
-  max-height: 84vh;
+  width: min(920px, 94vw);
+  max-height: 88vh;
   overflow-y: auto;
   text-align: left;
 }
@@ -992,7 +1007,7 @@ main {
 }
 .rp-fit {
   font-size: 12px;
-  color: #2e7d32;
+  color: #C62827;
 }
 .rp-waiting span {
   font-size: 11px;
@@ -1055,11 +1070,11 @@ main {
   color: #888;
 }
 .rp-comp.good {
-  background: #f2f7f2;
-  border-color: #7cb87c;
+  background: #fdf6f6;
+  border-color: #e6b3b3;
 }
 .rp-comp.good b {
-  color: #2e7d32;
+  color: #C62827;
 }
 .rp-note {
   margin: 8px 0 0;
@@ -1371,23 +1386,206 @@ main {
 .report-cta {
   display: flex;
   gap: 8px;
+  margin-top: 16px;
 }
 .btn-agent-connect {
-  flex: 1;
-  padding: 12px;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 10px 18px;
   border: none;
   border-radius: 8px;
-  background: #2e7d32;
+  background: #C62827;
   color: #fff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
+.btn-agent-connect:hover {
+  filter: brightness(0.95);
+}
 .btn-download-report {
-  width: 44px;
+  padding: 10px 16px;
   border: 1px solid #ddd;
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
+}
+
+/* ===== AI 레포트 대시보드 (키컬러 #C62827) ===== */
+.rp2-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+.rp2-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rp2-badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  background: #C62827;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 100px;
+}
+.rp2-industry {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+.rp2-addr {
+  font-size: 12px;
+  color: #888;
+}
+
+/* 상단 4개 요약 타일 */
+.rp2-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rp2-tile {
+  border: 1px solid #f0dede;
+  background: #fdf6f6;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rp2-tile small {
+  font-size: 11px;
+  color: #999;
+}
+.rp2-tile b {
+  font-size: 24px;
+  color: #C62827;
+}
+
+/* 2단 카드 그리드 */
+.rp2-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.rp2-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px;
+}
+.rp2-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+.rp2-card-sub {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
+}
+
+/* 판단 근거 막대 */
+.rp2-row {
+  margin-bottom: 12px;
+}
+.rp2-row-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.rp2-row-head span {
+  color: #666;
+}
+.rp2-row-head b {
+  color: #1a1a1a;
+}
+.rp2-bar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 100px;
+  overflow: hidden;
+}
+.rp2-bar-fill {
+  height: 100%;
+  background: #C62827;
+  border-radius: 100px;
+}
+
+/* 2·3순위 후보 + 경쟁 현황 */
+.rp2-runner {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+}
+.rp2-runner b {
+  color: #C62827;
+}
+.rp2-comps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.rp2-comp {
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+}
+.rp2-comp b {
+  display: block;
+  font-size: 20px;
+}
+.rp2-comp span {
+  font-size: 12px;
+  color: #888;
+}
+.rp2-comp.good {
+  border-color: #C62827;
+  background: #fdf6f6;
+}
+.rp2-comp.good b {
+  color: #C62827;
+}
+
+/* 공실 정보 / 실무 참고 행 */
+.rp2-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+}
+.rp2-info-row span {
+  color: #666;
+}
+.rp2-info-row b {
+  font-weight: 600;
+}
+
+/* 좁은 화면: 타일 2열, 카드 1열 */
+@media (max-width: 640px) {
+  .rp2-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .rp2-grid {
+    grid-template-columns: 1fr;
+  }
+  .rp2-hero {
+    flex-direction: column;
+  }
 }
