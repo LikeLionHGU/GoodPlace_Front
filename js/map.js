@@ -39,19 +39,12 @@ const STATUS_VIEW = {
   empty: { cls: "st-empty", icon: "assets/marker-vacant.svg", label: () => "빈 상가", sub: () => "비어있는 상가입니다." }
 };
 
-/** 상가 하나에 대한 커스텀 오버레이 생성 (상태별로 다르게) */
-function createVacancyOverlay(v) {
-  const position = new kakao.maps.LatLng(v.lat, v.lng);
-  const view = STATUS_VIEW[v.status] || STATUS_VIEW.empty;
-
-  const content = document.createElement("div");
-  content.className = `vacancy-overlay ${view.cls}`;
-
+/** 상가 상태별 말풍선(호버 시 표시) HTML */
+function vacancyBubbleHTML(v, view) {
   if (v.status === "open") {
     // 새로 생긴 매장: 사진 카드 + NEW OPEN 배지 + 자세히 보기
     const total = v.votes.reduce((s, x) => s + x.count, 0);
-    content.innerHTML = `
-      <div class="building"><img src="${view.icon}" alt="" /></div>
+    return `
       <div class="store-card">
         <div class="store-card-photo">
           <span class="new-open-badge">NEW OPEN</span>
@@ -61,23 +54,31 @@ function createVacancyOverlay(v) {
           <span>${v.votes[0]?.industry || "매장"} · 투표 ${total}명 참여</span>
           <a class="store-card-more">자세히 보기 &rsaquo;</a>
         </div>
-      </div>
-    `;
-    content.querySelector(".store-card-more").onclick = (e) => {
-      e.stopPropagation();
-      openStorePanel(v);
-    };
-  } else {
-    // 빈 상가 / 공사 중: 말풍선 툴팁 (제목 + 설명 + 꼬리)
-    content.innerHTML = `
-      <div class="building"><img src="${view.icon}" alt="" /></div>
-      <div class="tooltip-card">
-        <b>${view.label(v)}</b>
-        <span>${view.sub(v)}</span>
-        <img class="tooltip-tail" src="assets/tooltip-arrow.svg" alt="" />
-      </div>
-    `;
+      </div>`;
   }
+  // 빈 상가 / 공사 중: 말풍선 툴팁 (제목 + 설명 + 꼬리)
+  return `
+    <div class="tooltip-card">
+      <b>${view.label(v)}</b>
+      <span>${view.sub(v)}</span>
+      <img class="tooltip-tail" src="assets/tooltip-arrow.svg" alt="" />
+    </div>`;
+}
+
+/** 상가 하나에 대한 커스텀 오버레이 생성 (핀 마커 항상 + 호버 시 말풍선) */
+function createVacancyOverlay(v) {
+  const position = new kakao.maps.LatLng(v.lat, v.lng);
+  const view = STATUS_VIEW[v.status] || STATUS_VIEW.empty;
+
+  // 지도에는 상태별 핀(마커)만 항상 고정 표시하고,
+  // 말풍선(.overlay-bubble)은 평소 숨겼다가 마우스를 올리면(CSS :hover) 보여준다.
+  // 말풍선은 absolute라 표시/숨김이 마커 위치(앵커)에 영향을 주지 않는다 → 핀이 안 흔들림.
+  const content = document.createElement("div");
+  content.className = `vacancy-overlay ${view.cls}`;
+  content.innerHTML = `
+    <div class="building"><img src="${view.icon}" alt="" /></div>
+    <div class="overlay-bubble">${vacancyBubbleHTML(v, view)}</div>
+  `;
 
   // 빈 상가/투표 중 → 투표 패널, 공사 중/개업 → 매장 패널(쿠폰)
   content.onclick = () => {
@@ -88,12 +89,18 @@ function createVacancyOverlay(v) {
     }
   };
 
-  return new kakao.maps.CustomOverlay({
+  const overlay = new kakao.maps.CustomOverlay({
     position,
     content,
-    yAnchor: 1,
-    zIndex: 10 // 배경 흐림 레이어(#map-tint)보다 위에 그려지도록
+    yAnchor: 1, // 핀 하단 끝이 실제 좌표에 붙도록 (CSS translateY 이중 오프셋 제거와 한 쌍)
+    zIndex: 10  // 배경 흐림 레이어(#map-tint)보다 위에 그려지도록
   });
+
+  // 호버한 핀의 말풍선이 이웃 핀 마커에 가리지 않도록 맨 앞으로 올렸다가 원복
+  content.addEventListener("mouseenter", () => overlay.setZIndex(100));
+  content.addEventListener("mouseleave", () => overlay.setZIndex(10));
+
+  return overlay;
 }
 
 let overlays = [];

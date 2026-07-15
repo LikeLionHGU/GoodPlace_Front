@@ -518,6 +518,12 @@ function condRows(items) {
   `).join("");
 }
 
+/** 라벨로 배열에서 값 찾기 (없으면 폴백) */
+function findVal(arr, label, fallback = "정보 없음") {
+  const hit = (arr || []).find((x) => x.label === label);
+  return hit ? hit.value : fallback;
+}
+
 function renderCandidateReportBody() {
   const c = neighborhoodCandidates[activeCandidateIndex];
 
@@ -528,57 +534,84 @@ function renderCandidateReportBody() {
     </button>
   `).join("");
 
-  const runnerUpsHtml = c.runnerUps.map((r) => `<div>${r.industry} <b>${r.pct}%</b></div>`).join("");
+  const initialCost = findVal(c.unit, "예상 초기비용");
+  const competeCount = (c.competition && c.competition.length) ? c.competition[0].count : 0;
 
+  // AI 판단 근거 (요소별 막대)
   const breakdownHtml = c.breakdown.map((b) => `
-    <div class="rp-row">
-      <span class="rp-row-label">${b.label}${b.weight != null ? ` <small>가중 ${b.weight}%</small>` : ""}</span>
-      <div class="rp-bar"><div class="rp-bar-fill" style="width:${b.score}%"></div></div>
-      <span class="rp-row-desc">${b.detail}</span>
+    <div class="rp2-row">
+      <div class="rp2-row-head">
+        <span>${b.label}${b.weight != null ? ` · ${b.weight}%` : ""}</span>
+        <b>${b.detail}</b>
+      </div>
+      <div class="rp2-bar"><div class="rp2-bar-fill" style="width:${b.score}%"></div></div>
     </div>
   `).join("");
 
-  const compHtml = c.competition.map((comp) => `
-    <div class="rp-comp ${comp.count === 0 ? "good" : ""}">
-      <b>${comp.count}</b><span>${comp.name}</span><small>평균 ${comp.avg}</small>
+  // 2·3순위 후보
+  const runnerUpsHtml = c.runnerUps.map((r) => `
+    <div class="rp2-runner"><span>${r.industry}</span><b>${r.pct}%</b></div>
+  `).join("");
+
+  // 경쟁 현황 (업종별 점포 수)
+  const compTilesHtml = c.competition.map((comp) => `
+    <div class="rp2-comp ${comp.count === 0 ? "good" : ""}">
+      <b>${comp.count}</b><span>${comp.name}</span>
     </div>
   `).join("");
+
+  // 이 공실 정보
+  const infoRows = [
+    ["면적", c.area],
+    ["층", c.floor],
+    ["직전 업종", findVal(c.unit, "직전 업종")],
+    ["공실 기간", c.vacantSince || "정보 없음"],
+    ["보증금 / 월세", findVal(c.contract, "보증금 / 월세")],
+    ["유동 인구", c.footTraffic || "정보 없음"]
+  ].map(([k, v]) => `<div class="rp2-info-row"><span>${k}</span><b>${v}</b></div>`).join("");
 
   document.getElementById("report-body").innerHTML = `
     <div class="cand-tabs">${tabsHtml}</div>
 
-    <div class="cand-head">
-      <b>${c.name}</b>
-      <span>${c.addr} · ${c.area} · ${c.floor}</span>
+    <div class="rp2-hero">
+      <div class="rp2-hero-main">
+        <span class="rp2-badge">1순위 추천</span>
+        <b class="rp2-industry">${c.industry}</b>
+        <span class="rp2-addr">${c.name} · ${c.addr} · ${c.area} · ${c.floor}</span>
+      </div>
+      <button class="btn-agent-connect">&#128222; 중개사에게 연결하기</button>
     </div>
 
-    <div class="demand-box">
-      <div class="demand-box-top">
-        <span class="demand-badge">추천 1순위</span>
-        <span class="demand-fit">수요 적합도 ${c.fitScore}%</span>
-      </div>
-      <div class="demand-industry">${c.industry}</div>
-      <p class="demand-desc">${c.demandDesc}</p>
+    <div class="rp2-tiles">
+      <div class="rp2-tile"><small>종합 적합도</small><b>${c.fitScore}%</b></div>
+      <div class="rp2-tile"><small>선결제 대기</small><b>${c.waitingCustomers}명</b></div>
+      <div class="rp2-tile"><small>반경 내 경쟁</small><b>${competeCount}곳</b></div>
+      <div class="rp2-tile"><small>예상 초기비용</small><b>${initialCost}</b></div>
     </div>
 
-    <div class="stat-pair">
-      <div class="stat-box">
-        <span>선결제 대기 고객</span>
-        <b>${c.waitingCustomers}명</b>
-        <small>개업일 첫 손님</small>
-      </div>
-      <div class="stat-box">
-        <span>2·3순위 후보</span>
-        ${runnerUpsHtml}
-      </div>
-    </div>
-
-    <div class="accordion open">
-      <button class="accordion-head"><span>이 추천의 근거</span><i class="chev">&#8964;</i></button>
-      <div class="accordion-body">
-        <p class="rp-formula">종합 적합도 ${c.fitScore}% — 아래 4개 요소를 반영해 산출</p>
+    <div class="rp2-grid">
+      <div class="rp2-card">
+        <h3>AI가 이렇게 판단했어요</h3>
+        <p class="rp2-card-sub">${c.demandDesc}</p>
         ${breakdownHtml}
-        <p class="rp-disclaimer">명당은 성공을 보장하지 않습니다. 검증된 수요와 개업일 첫 손님까지가 명당의 책임이며, 이후 운영·품질은 창업자의 몫입니다.</p>
+      </div>
+
+      <div class="rp2-card">
+        <h3>2·3순위 후보 &amp; 경쟁 현황</h3>
+        <div class="rp2-runners">${runnerUpsHtml}</div>
+        <div class="rp2-comps">${compTilesHtml}</div>
+      </div>
+
+      <div class="rp2-card">
+        <h3>이 공실 정보</h3>
+        <div class="rp2-info">${infoRows}</div>
+      </div>
+
+      <div class="rp2-card">
+        <h3>창업 실무 참고</h3>
+        <div class="rp2-info-row"><span>예상 초기비용</span><b>${initialCost}</b></div>
+        <div class="rp2-info-row"><span>필요 인허가</span><b>${findVal(c.unit, "필요 인허가")}</b></div>
+        <p class="source">업종 평균(공단 통계) 기준이며, 실제 비용은 점포 상태·권리금·인테리어에 따라 달라집니다.</p>
       </div>
     </div>
 
@@ -593,31 +626,16 @@ function renderCandidateReportBody() {
       </div>
     </div>
 
-    <div class="accordion">
-      <button class="accordion-head"><span>주변 경쟁 <small>공공 API</small></span><i class="chev">&#8964;</i></button>
-      <div class="accordion-body">
-        <div class="rp-comp-wrap">${compHtml}</div>
-        <p class="source">소상공인 상가정보 API 실시간 집계</p>
-      </div>
-    </div>
-
-    <div class="accordion">
-      <button class="accordion-head"><span>공실 기본정보·참고 비용</span><i class="chev">&#8964;</i></button>
-      <div class="accordion-body">
-        ${condRows(c.unit)}
-        <p class="source">초기비용은 업종 평균(공단 통계) 참고값. 실제는 점포·인테리어에 따라 다름.</p>
-      </div>
-    </div>
-
     <div class="source-legend">
       <span><i class="src-dot src-verified"></i>명당 검증</span>
       <span><i class="src-dot src-public"></i>공공 API</span>
       <span><i class="src-dot src-agent"></i>중개사 입력</span>
     </div>
 
+    <p class="rp-disclaimer">명당은 성공을 보장하지 않습니다. 검증된 수요와 개업일 첫 손님까지가 명당의 책임이며, 이후 운영·품질은 창업자의 몫입니다.</p>
+
     <div class="report-cta">
-      <button class="btn-agent-connect">&#128222; 이 자리 중개사에게 연결</button>
-      <button class="btn-download-report" title="다운로드">&#11015;</button>
+      <button class="btn-download-report" title="다운로드">&#11015; 리포트 이미지 저장</button>
     </div>
   `;
 
