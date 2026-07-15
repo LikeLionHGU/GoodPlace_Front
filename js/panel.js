@@ -51,6 +51,9 @@ function closeAllPanels() {
 document.addEventListener("click", (e) => {
   const panels = [panelEl, myPanelEl, storePanelEl, voteSelectPanelEl, neighborhoodPanelEl];
   if (!panels.some((p) => p && !p.hidden)) return; // 열린 패널 없음
+  // 업종/세부업종 클릭은 그 요소를 리렌더로 교체(분리)한다 → 분리된 타깃은 패널 내부
+  // 상호작용이므로 닫지 않는다. (분리되면 closest가 null이 되어 '바깥'으로 오판되는 문제 방지)
+  if (!e.target.isConnected) return;
   if (e.target.closest("#vote-panel, #my-panel, #store-panel, #vote-select-panel, #neighborhood-panel")) return;
   if (e.target.closest(".header-btn-group")) return; // 여는 버튼 클릭은 버튼 핸들러에 맡김
   if (e.target.closest(".modal-backdrop")) return;   // 모달은 모달 핸들러가 처리
