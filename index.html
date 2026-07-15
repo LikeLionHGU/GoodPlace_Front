@@ -21,11 +21,11 @@
   <main>
     <div id="map"></div>
 
-    <!-- 좌상단: 나의 명당 / 투자하기 / 동네 현황 (시안 순서) -->
+    <!-- 좌상단: 투표하기 / 나의 명당 / 동네 현황 (이 순서) -->
     <div class="header-btn-group left">
-      <button id="btn-my"><img src="assets/icon-person.svg" alt="" /> <span class="hbtn-label">나의 명당</span></button>
-      <button id="btn-open-vote-select"><img src="assets/icon-target.svg" alt="" /> <span class="hbtn-label">투자하기</span></button>
-      <button id="btn-open-neighborhood"><img src="assets/icon-home.svg" alt="" /> <span class="hbtn-label">동네 현황</span></button>
+      <button id="btn-open-vote-select"><img src="assets/icon-target.svg" alt="" /> 투표하기</button>
+      <button id="btn-my"><img src="assets/icon-person.svg" alt="" /> 나의 명당</button>
+      <button id="btn-open-neighborhood"><img src="assets/icon-home.svg" alt="" /> 동네 현황</button>
     </div>
 
     <!-- 내 명당 패널 (창업 완료된 '명당' 목록) -->
@@ -84,18 +84,18 @@
     <div class="wide-panel" id="vote-select-panel" hidden>
       <div class="wide-panel-inner">
         <h2>우리 동네에 뭐가 생기면 좋을까요?</h2>
-        <p class="wide-panel-sub">업종을 골라 투표하세요 (여러 개 선택 가능)</p>
+        <p class="wide-panel-sub">업종을 골라 투표해주세요.</p>
 
         <div class="category-row" id="category-row"></div>
 
         <div class="subcategory-box">
-          <p class="subcategory-title"><b id="subcategory-cat-name"></b> 세부 업종을 눌러 선택</p>
+          <p class="subcategory-title"><b id="subcategory-cat-name"></b> 세부 업종을 눌러 투표해주세요.</p>
           <div class="subcategory-grid" id="subcategory-grid"></div>
         </div>
 
         <div class="vote-select-footer">
-          <span id="selected-count">0개 선택됨</span>
-          <button id="btn-submit-vote-select" class="primary" disabled>투자하기</button>
+          <button id="btn-free-vote" disabled>무료 투표하기</button>
+          <button id="btn-paid-vote" class="primary" disabled>10,000원 투표하기</button>
         </div>
       </div>
     </div>
@@ -155,11 +155,28 @@
     <div class="modal-backdrop anchored-topleft" id="modal-vote-select-confirm" hidden>
       <div class="modal-card">
         <div class="target-icon-circle"><span class="target-icon-mask"></span></div>
-        <h3>투자하기</h3>
-        <p class="modal-desc">선택한 <b id="vs-confirm-count">0개</b> 업종에 투표할까요?</p>
+        <h3 id="vs-confirm-title">투표하기</h3>
+        <p class="modal-desc">선택하신 업종으로 투표가 반영돼요.</p>
         <div class="modal-actions">
           <button data-close="modal-vote-select-confirm">취소</button>
-          <button class="primary" id="btn-vote-select-confirm-ok">투자하기</button>
+          <button class="primary" id="btn-vote-select-confirm-ok">투표하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10,000원 투표 확인 -->
+    <div class="modal-backdrop" id="modal-paid-vote-confirm" hidden>
+      <div class="modal-card">
+        <p class="modal-desc paid-vote-desc">
+          창업이 확정되면<br/>
+          <b>12,000원 업종 이용권</b>으로<br/>
+          교환됩니다.
+        </p>
+        <p class="modal-note">&#9432; 창업이 진행되지 않을 경우<br/>결제금액은 전액 환불됩니다.</p>
+        <hr class="modal-divider" />
+        <div class="modal-actions">
+          <button data-close="modal-paid-vote-confirm">닫기</button>
+          <button class="primary" id="btn-paid-vote-confirm-ok">10,000원 투표하기</button>
         </div>
       </div>
     </div>
@@ -212,12 +229,12 @@
   </main>
 
   <!-- 설정 → 인증 → 데이터 → 패널 UI → 지도 로직 순서로 로드 -->
-  <script src="js/config.js?v=35"></script>
-  <script src="js/auth.js?v=38"></script>
+  <script src="js/config.js?v=32"></script>
+  <script src="js/auth.js?v=32"></script>
   <script>requireLogin();</script>
-  <script src="js/vacancies.js?v=35"></script>
-  <script src="js/panel.js?v=37"></script>
-  <script src="js/map.js?v=34"></script>
+  <script src="js/vacancies.js?v=32"></script>
+  <script src="js/panel.js?v=32"></script>
+  <script src="js/map.js?v=32"></script>
 
 </body>
 </html>
