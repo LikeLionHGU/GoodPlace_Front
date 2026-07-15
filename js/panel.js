@@ -31,6 +31,15 @@ document.querySelectorAll("[data-close]").forEach((btn) => {
   btn.onclick = () => { document.getElementById(btn.dataset.close).hidden = true; };
 });
 
+// 모달: 딤(백드롭) 영역 클릭 시 닫기 (카드 내부 클릭은 유지).
+// 처리 중 로딩 모달은 바깥 클릭으로 닫지 않는다.
+document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+  if (backdrop.id === "modal-loading") return;
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.hidden = true;
+  });
+});
+
 function closeAllPanels() {
   panelEl.hidden = true;
   myPanelEl.hidden = true;
@@ -38,6 +47,17 @@ function closeAllPanels() {
   voteSelectPanelEl.hidden = true;
   neighborhoodPanelEl.hidden = true;
 }
+
+// 사이드바/와이드 패널: 바깥(지도 등) 클릭 시 닫기.
+// - 패널 내부 클릭, 패널을 여는 헤더 버튼 클릭, 모달 클릭은 제외.
+document.addEventListener("click", (e) => {
+  const panels = [panelEl, myPanelEl, storePanelEl, voteSelectPanelEl, neighborhoodPanelEl];
+  if (!panels.some((p) => p && !p.hidden)) return; // 열린 패널 없음
+  if (e.target.closest("#vote-panel, #my-panel, #store-panel, #vote-select-panel, #neighborhood-panel")) return;
+  if (e.target.closest(".header-btn-group")) return; // 여는 버튼 클릭은 버튼 핸들러에 맡김
+  if (e.target.closest(".modal-backdrop")) return;   // 모달은 모달 핸들러가 처리
+  closeAllPanels();
+});
 
 async function loadMe() {
   me = await fetchMe();
