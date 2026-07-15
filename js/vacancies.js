@@ -54,6 +54,13 @@ const MOCK_VACANCIES = [
     area: "25㎡ / 1층",
     status: "open",
     openedName: "달콤 디저트 카페",     // 창업 완료된 매장 이름
+    // ↓ 창업 매장 광고용 필드 (백엔드 /map placements 계약과 동일한 이름).
+    //   photo = 파일명만 저장, 프론트가 assets/shops/{photo} 로 참조(팀이 실사진 업로드).
+    industry: "디저트 카페",
+    photo: "dalkom-dessert-cafe.jpg",
+    hours: "매일 10:00 - 21:00",
+    address: "경상북도 포항시 북구 양덕로",
+    intro: "지난달까지 공사 중이던 자리에 새로 문을 연 디저트 카페입니다. 명당을 통해 선결제해 주신 여러분 감사합니다. 첫 손님을 기다리고 있어요!",
     votes: [
       { industry: "디저트 카페", count: 62 }
     ]

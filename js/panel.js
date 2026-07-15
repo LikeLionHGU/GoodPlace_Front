@@ -399,6 +399,24 @@ function showCoupon(vacancy) {
   openModal("modal-coupon");
 }
 
+/** 2차 상세 말풍선의 '쿠폰 받기' — 사이드바 없이 쿠폰 발급/재열람 (map.js에서 호출) */
+async function claimCouponFor(vacancy) {
+  if (!vacancy) return;
+  try {
+    if (me.claimedCoupons.includes(vacancy.id)) {
+      showCoupon(vacancy);       // 이미 받았으면 다시 보기
+      return;
+    }
+    const coupon = await postClaimCoupon(vacancy.id);
+    if (!me.claimedCoupons.includes(vacancy.id)) me.claimedCoupons.push(vacancy.id);
+    drawCoupon(coupon);
+    openModal("modal-coupon");
+  } catch (err) {
+    console.error(err);
+    alert("쿠폰 발급 중 오류가 발생했습니다.");
+  }
+}
+
 // ---------- AI 레포트: 확인 → (냥 확인) → 로딩 → 리포트 ----------
 document.getElementById("btn-report").onclick = () => {
   if (!currentVacancy) return;
