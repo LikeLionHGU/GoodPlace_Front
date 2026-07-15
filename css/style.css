@@ -519,8 +519,8 @@ main {
 /* ===== 좌측 패널 공통 ===== */
 #vote-panel, #my-panel, #store-panel, #neighborhood-panel {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 64px;   /* 상단 버튼(top:12, 높이 ~42px) 아래에서 시작 → 버튼과 겹치지 않음 */
+  left: 16px;  /* 버튼 그룹과 좌측 정렬 */
   bottom: 12px;
   width: 250px;
   background: #fff;
@@ -528,7 +528,7 @@ main {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   padding: 14px;
   box-sizing: border-box;
-  z-index: 16; /* 상단 버튼(15)보다 앞, 고정 헤더(20)보다는 뒤 → 사이드바가 버튼을 덮는다 */
+  z-index: 14; /* 마커(idle 10)보다 위, 상단 버튼(15)·헤더(20)보다는 아래 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
