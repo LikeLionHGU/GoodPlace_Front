@@ -104,7 +104,34 @@ const SUBCATEGORY_ICONS = {
   "당구장": "assets/sub-billiard.svg",
   "볼링장": "assets/sub-bowling.svg",
   "만화카페": "assets/sub-comicscafe.svg",
-  "방탈출카페": "assets/sub-escaperoom.svg"
+  "방탈출카페": "assets/sub-escaperoom.svg",
+  // 소매
+  "편의점": "assets/sub-convenience.svg",
+  "옷가게": "assets/sub-clothes.svg",
+  "문구점": "assets/sub-stationery.svg",
+  "잡화점": "assets/sub-goods.svg",
+  "꽃집": "assets/sub-flower.svg",
+  "화장품가게": "assets/sub-cosmetics.svg",
+  "신발가게": "assets/sub-shoes.svg",
+  "안경점": "assets/sub-glasses.svg",
+  // 생활서비스
+  "세탁소": "assets/sub-laundry.svg",
+  "부동산": "assets/sub-realestate.svg",
+  "미용실": "assets/sub-hairsalon.svg",
+  "인쇄소": "assets/sub-print.svg",
+  "네일샵": "assets/sub-nail.svg",
+  "사진관": "assets/sub-photo.svg",
+  "휴대폰매장": "assets/sub-phone.svg",
+  "열쇠·수선": "assets/sub-key.svg",
+  // 의료
+  "약국": "assets/sub-pharmacy.svg",
+  "한의원": "assets/sub-oriental.svg",
+  "치과": "assets/sub-dental.svg",
+  "동물병원": "assets/sub-animal.svg",
+  "피부과": "assets/sub-skin.svg",
+  "정형외과": "assets/sub-ortho.svg",
+  "안과": "assets/sub-eye.svg",
+  "산부인과": "assets/sub-obgyn.svg"
 };
 
 // 동네 전체 업종별 누적 투표수 (동네 현황 패널의 "투표 순위" 근거) - 백엔드 GET /neighborhood 응답으로 교체
