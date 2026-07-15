@@ -1,13 +1,12 @@
 // =========================================================
 // 패널 + 모달 UI 로직
 //  - 투표 패널 (빈 상가/투표 중) · 매장 패널 (공사 중/개업)
-//  - 내 명당, 냥 결제, 쿠폰, AI 리포트
+//  - 내 명당, 쿠폰, AI 리포트
 // =========================================================
 
 let currentVacancy = null;   // 투표/매장 패널에 떠 있는 상가
-let me = { coins: 0, voteHistory: [], openedPlaces: [], claimedCoupons: [] };
+let me = { voteHistory: [], openedPlaces: [], claimedCoupons: [] };
 let pendingIndustry = null;  // 투표 확인 모달에서 대기 중인 업종
-let afterCharge = null;      // 결제 완료 후 이어서 실행할 동작
 let neighborhood = null;     // 동네 현황 데이터 (fetchNeighborhood)
 let reportContext = "vacancy"; // "vacancy" | "neighborhood" - AI 리포트 생성 확인 모달이 어느 흐름에서 열렸는지
 let activeCategory = CATEGORY_TAXONOMY[0].key;  // 투표하기 패널에서 지금 보고 있는 대분류
@@ -21,7 +20,6 @@ const neighborhoodPanelEl = document.getElementById("neighborhood-panel");
 const rankListEl = document.getElementById("rank-list");
 const myVoteBoxEl = document.getElementById("my-vote-box");
 const totalCountEl = document.getElementById("total-count");
-const coinCountEl = document.getElementById("coin-count");
 
 // ---------- 공용 ----------
 function openModal(id) { document.getElementById(id).hidden = false; }
@@ -29,6 +27,15 @@ function closeModal(id) { document.getElementById(id).hidden = true; }
 
 document.querySelectorAll("[data-close]").forEach((btn) => {
   btn.onclick = () => { document.getElementById(btn.dataset.close).hidden = true; };
+});
+
+// 모달: 딤(백드롭) 영역 클릭 시 닫기 (카드 내부 클릭은 유지).
+// 처리 중 로딩 모달은 바깥 클릭으로 닫지 않는다.
+document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+  if (backdrop.id === "modal-loading") return;
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.hidden = true;
+  });
 });
 
 function closeAllPanels() {
@@ -39,13 +46,19 @@ function closeAllPanels() {
   neighborhoodPanelEl.hidden = true;
 }
 
+// 사이드바/와이드 패널: 바깥(지도 등) 클릭 시 닫기.
+// - 패널 내부 클릭, 패널을 여는 헤더 버튼 클릭, 모달 클릭은 제외.
+document.addEventListener("click", (e) => {
+  const panels = [panelEl, myPanelEl, storePanelEl, voteSelectPanelEl, neighborhoodPanelEl];
+  if (!panels.some((p) => p && !p.hidden)) return; // 열린 패널 없음
+  if (e.target.closest("#vote-panel, #my-panel, #store-panel, #vote-select-panel, #neighborhood-panel")) return;
+  if (e.target.closest(".header-btn-group")) return; // 여는 버튼 클릭은 버튼 핸들러에 맡김
+  if (e.target.closest(".modal-backdrop")) return;   // 모달은 모달 핸들러가 처리
+  closeAllPanels();
+});
+
 async function loadMe() {
   me = await fetchMe();
-  renderTopbar();
-}
-
-function renderTopbar() {
-  coinCountEl.innerHTML = `<img src="assets/icon-coin-ring.svg" alt="냥" /> ${me.coins}냥`;
 }
 
 // 프로필 아이콘 → 로그아웃
@@ -58,34 +71,6 @@ document.querySelector(".profile-icon").onclick = () => {
 function myVoteFor(vacancyId) {
   return me.voteHistory.find((h) => h.vacancyId === vacancyId) || null;
 }
-
-// ---------- 냥 결제 ----------
-/** 냥이 부족하면 결제 모달을 띄우고 true 반환. onCharged = 결제 후 이어갈 동작 */
-function needCharge(cost, onCharged) {
-  if (me.coins >= cost) return false;
-  document.getElementById("charge-current").innerText = `${me.coins}냥`;
-  document.getElementById("charge-need").innerText = `${cost}냥`;
-  afterCharge = onCharged || null;
-  openModal("modal-charge");
-  return true;
-}
-
-document.getElementById("btn-charge-ok").onclick = async () => {
-  try {
-    const r = await postPayment();
-    me.coins = r.coins;
-    renderTopbar();
-    closeModal("modal-charge");
-    if (afterCharge) {
-      const next = afterCharge;
-      afterCharge = null;
-      next();
-    }
-  } catch (err) {
-    console.error(err);
-    alert("결제 처리 중 오류가 발생했습니다.");
-  }
-};
 
 // ---------- 투표 패널 (empty / voting) ----------
 function openPanel(vacancy) {
@@ -112,7 +97,7 @@ function renderPanel() {
     li.innerHTML = `
       <span>${i + 1}. ${v.industry}</span>
       <span class="votes">${v.count}명</span>
-      <button class="btn-vote" title="투표 (100냥)">&#9997;</button>
+      <button class="btn-vote" title="투표">&#9997;</button>
     `;
     const btn = li.querySelector(".btn-vote");
     if (voted) {
@@ -134,8 +119,6 @@ function renderPanel() {
   } else {
     myVoteBoxEl.innerHTML = `<span class="empty">아직 이 상가에 투표하지 않았어요</span>`;
   }
-
-  renderTopbar();
 }
 
 // ---------- 투표 플로우 ----------
@@ -144,7 +127,6 @@ function askVote(industry) {
     alert("이미 이 상가에 투표했어요. (상가당 1회)");
     return;
   }
-  if (needCharge(VOTE_COST, () => askVote(industry))) return;
   pendingIndustry = industry;
   document.getElementById("vote-confirm-title").innerText = `"${industry}"에 투표하시겠습니까?`;
   openModal("modal-vote-confirm");
@@ -162,7 +144,6 @@ async function doVote(industry) {
   try {
     const r = await postVote(currentVacancy.id, industry);
     currentVacancy.votes = r.votes;
-    me.coins = r.coins;
     me.voteHistory.push({
       vacancyId: currentVacancy.id,
       industry,
@@ -183,7 +164,6 @@ document.getElementById("btn-new-vote").onclick = () => {
     alert("이미 이 상가에 투표했어요. (상가당 1회)");
     return;
   }
-  if (needCharge(VOTE_COST, () => document.getElementById("btn-new-vote").onclick())) return;
   document.getElementById("new-industry-input").value = "";
   openModal("modal-new-industry");
   document.getElementById("new-industry-input").focus();
@@ -349,7 +329,6 @@ function renderNeighborhoodPanel() {
 }
 
 document.getElementById("btn-neighborhood-report").onclick = () => {
-  if (needCharge(REPORT_COST, () => document.getElementById("btn-neighborhood-report").onclick())) return;
   openModal("modal-report-confirm");
   reportContext = "neighborhood";
 };
@@ -417,10 +396,27 @@ function showCoupon(vacancy) {
   openModal("modal-coupon");
 }
 
-// ---------- AI 레포트: 확인 → (냥 확인) → 로딩 → 리포트 ----------
+/** 2차 상세 말풍선의 '쿠폰 받기' — 사이드바 없이 쿠폰 발급/재열람 (map.js에서 호출) */
+async function claimCouponFor(vacancy) {
+  if (!vacancy) return;
+  try {
+    if (me.claimedCoupons.includes(vacancy.id)) {
+      showCoupon(vacancy);       // 이미 받았으면 다시 보기
+      return;
+    }
+    const coupon = await postClaimCoupon(vacancy.id);
+    if (!me.claimedCoupons.includes(vacancy.id)) me.claimedCoupons.push(vacancy.id);
+    drawCoupon(coupon);
+    openModal("modal-coupon");
+  } catch (err) {
+    console.error(err);
+    alert("쿠폰 발급 중 오류가 발생했습니다.");
+  }
+}
+
+// ---------- AI 레포트: 확인 → 로딩 → 리포트 ----------
 document.getElementById("btn-report").onclick = () => {
   if (!currentVacancy) return;
-  if (needCharge(REPORT_COST, () => document.getElementById("btn-report").onclick())) return;
   reportContext = "vacancy";
   openModal("modal-report-confirm");
 };
@@ -433,8 +429,6 @@ document.getElementById("btn-report-confirm-ok").onclick = async () => {
     const report = isNeighborhood
       ? await postNeighborhoodReport()
       : await postGenerateReport(currentVacancy.id);
-    me.coins = report.coins;
-    renderTopbar();
     if (isNeighborhood) {
       renderNeighborhoodCandidates(report);
     } else {
@@ -682,9 +676,9 @@ document.getElementById("btn-my").onclick = () => {
 };
 
 function renderMyPanel() {
+  // v3: 투표는 동네 단위라 '내가 고른 명당(공실별 투표)'은 없앰.
+  // '받은 쿠폰'도 명당 목록과 기능이 겹쳐 제거 → 여기선 창업 완료된 '명당'만 보여준다.
   const openedEl = document.getElementById("opened-list");
-  const historyEl = document.getElementById("history-list");
-
   openedEl.innerHTML = "";
   if (me.openedPlaces.length === 0) {
     openedEl.innerHTML = `<li class="empty">아직 창업 완료된 곳이 없어요</li>`;
@@ -696,51 +690,16 @@ function renderMyPanel() {
     li.querySelector(".btn-goto").onclick = () => gotoVacancy(p.vacancyId);
     openedEl.appendChild(li);
   });
-
-  // 창업 완료된 상가는 투표 이력에서 제외 (위 목록과 중복 방지)
-  const openedIds = me.openedPlaces.map((p) => p.vacancyId);
-  const history = me.voteHistory.filter((h) => !openedIds.includes(h.vacancyId));
-
-  historyEl.innerHTML = "";
-  if (history.length === 0) {
-    historyEl.innerHTML = `<li class="empty">아직 투표 이력이 없어요</li>`;
-  }
-  history.forEach((h) => {
-    const li = document.createElement("li");
-    li.innerHTML = `<span>${h.industry}<br/><small>${h.addr}</small></span>
-                    <button class="btn-goto">이동하기</button>`;
-    li.querySelector(".btn-goto").onclick = () => gotoVacancy(h.vacancyId);
-    historyEl.appendChild(li);
-  });
-
-  // 내 쿠폰: 받아둔 쿠폰 언제든 다시 보기
-  const couponEl = document.getElementById("coupon-list");
-  couponEl.innerHTML = "";
-  if (me.claimedCoupons.length === 0) {
-    couponEl.innerHTML = `<li class="empty">아직 받은 쿠폰이 없어요</li>`;
-  }
-  me.claimedCoupons.forEach((vacancyId) => {
-    const v = window.__vacancies?.find((x) => x.id === vacancyId);
-    if (!v) return;
-    const li = document.createElement("li");
-    li.innerHTML = `<span>&#127915; 디스카운트 쿠폰<br/><small>${v.openedName}</small></span>
-                    <button class="btn-goto">보기</button>`;
-    li.querySelector(".btn-goto").onclick = () => showCoupon(v);
-    couponEl.appendChild(li);
-  });
 }
 
-/** 이동하기: 지도 이동 + 상태에 맞는 패널 오픈 */
+/** 이동하기: 사이드바는 유지한 채 해당 주소로 줌인 */
 function gotoVacancy(vacancyId) {
   const v = window.__vacancies?.find((x) => x.id === vacancyId);
   if (!v) return;
   if (typeof map !== "undefined" && map) {
-    map.panTo(new kakao.maps.LatLng(v.lat, v.lng));
-  }
-  if (v.status === "open" || v.status === "construction") {
-    openStorePanel(v);
-  } else {
-    openPanel(v);
+    const pos = new kakao.maps.LatLng(v.lat, v.lng);
+    map.setCenter(pos);
+    map.setLevel(2);  // 줌인 (기본 레벨 4 → 2)
   }
 }
 

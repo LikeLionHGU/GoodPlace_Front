@@ -6,15 +6,14 @@
   <title>명당 - 우리동네 공실 투표</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <!-- ?v= 숫자는 캐시 버스터: 파일 수정 후 화면에 반영 안 되면 숫자를 올리세요 -->
-  <link rel="stylesheet" href="css/style.css?v=32" />
+  <link rel="stylesheet" href="css/style.css?v=34" />
 </head>
 <body>
 
-  <!-- 상단 바: 서비스명 + 냥 잔액/프로필 -->
+  <!-- 상단 바: 서비스명 + 프로필 -->
   <header id="topbar">
     <h1><img src="assets/logo.svg" alt="명당" /></h1>
     <div class="topbar-right">
-      <span id="coin-count"><img src="assets/icon-coin-ring.svg" alt="냥" /> 50냥</span>
       <img class="profile-icon" src="assets/profile.svg" alt="내 정보" title="내 정보" />
     </div>
   </header>
@@ -29,15 +28,11 @@
       <button id="btn-open-neighborhood"><img src="assets/icon-home.svg" alt="" /> 동네 현황</button>
     </div>
 
-    <!-- 내 명당 패널 (명당 / 내가 고른 명당 / 받은 쿠폰) -->
+    <!-- 내 명당 패널 (창업 완료된 '명당' 목록) -->
     <aside id="my-panel" hidden>
       <button class="btn-panel-back" data-close="my-panel">&#8249;</button>
       <p class="section-label"><img class="section-icon" src="assets/icon-mypage.svg" alt="" /> 명당</p>
       <ul id="opened-list" class="my-list"></ul>
-      <p class="section-label"><img class="section-icon" src="assets/icon-mypick.svg" alt="" /> 내가 고른 명당</p>
-      <ul id="history-list" class="my-list"></ul>
-      <p class="section-label"><img class="section-icon" src="assets/icon-coupon.svg" alt="" /> 받은 쿠폰</p>
-      <ul id="coupon-list" class="my-list"></ul>
     </aside>
 
     <!-- 빈 상가/투표 중 상가 클릭 시: 투표 패널 -->
@@ -64,7 +59,7 @@
 
       <div class="panel-actions">
         <button id="btn-new-vote">새로운 업종 투표</button>
-        <button id="btn-report">AI레포트 생성 <small>(50냥)</small></button>
+        <button id="btn-report">AI레포트 생성</button>
       </div>
     </aside>
 
@@ -134,7 +129,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128499;</div>
         <h3>새로운 업종을 입력해주세요</h3>
-        <p class="modal-desc">투표하면 100냥이 차감됩니다.</p>
+        <p class="modal-desc">원하는 업종을 직접 적어 투표할 수 있어요.</p>
         <input type="text" id="new-industry-input" placeholder="ex. 김치찜, 삼겹살, 미용실" />
         <div class="modal-actions">
           <button data-close="modal-new-industry">취소</button>
@@ -148,7 +143,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128499;</div>
         <h3 id="vote-confirm-title">투표하시겠습니까?</h3>
-        <p class="modal-desc"><b>100냥</b>이 차감됩니다.<br/>가게가 생기면 쿠폰을 드려요. 불발 시 전액 환불!</p>
+        <p class="modal-desc">가게가 생기면 쿠폰을 드려요.</p>
         <div class="modal-actions">
           <button data-close="modal-vote-confirm">취소</button>
           <button class="primary" id="btn-vote-confirm-ok">투표</button>
@@ -186,26 +181,12 @@
       </div>
     </div>
 
-    <!-- 냥 부족 → 결제 -->
-    <div class="modal-backdrop" id="modal-charge" hidden>
-      <div class="modal-card">
-        <div class="modal-icon">&#129689;</div>
-        <h3>냥이 부족해요</h3>
-        <p class="modal-desc">보유: <b id="charge-current">0냥</b> · 필요: <b id="charge-need">100냥</b><br/>1,000원 결제 시 <b>100냥</b>이 충전됩니다.</p>
-        <div class="modal-actions">
-          <button data-close="modal-charge">취소</button>
-          <button class="primary" id="btn-charge-ok">1,000원 결제하기</button>
-        </div>
-        <p class="source">지금은 모의 결제 - 실제 결제 연동은 추후</p>
-      </div>
-    </div>
-
     <!-- AI 레포트 생성 확인 -->
     <div class="modal-backdrop" id="modal-report-confirm" hidden>
       <div class="modal-card">
         <div class="modal-icon">&#128203;</div>
         <h3>레포트를 생성하시겠습니까?</h3>
-        <p class="modal-desc"><b>50냥</b>이 차감됩니다.<br/>이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
+        <p class="modal-desc">이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
         <div class="modal-actions">
           <button data-close="modal-report-confirm">취소</button>
           <button class="primary" id="btn-report-confirm-ok">생성</button>

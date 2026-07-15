@@ -42,17 +42,32 @@ const STATUS_VIEW = {
 /** 상가 상태별 말풍선(호버 시 표시) HTML */
 function vacancyBubbleHTML(v, view) {
   if (v.status === "open") {
-    // 새로 생긴 매장: 사진 카드 + NEW OPEN 배지 + 자세히 보기
-    const total = v.votes.reduce((s, x) => s + x.count, 0);
+    // 새로 생긴 매장: 1차(사진 카드 + NEW OPEN + 자세히 보기) + 2차(영업시간·위치·소개·쿠폰)
+    const industry = v.industry || v.votes?.[0]?.industry || "매장";
+    // photo = 파일명만. 실제 경로는 assets/shops/. 없거나 로딩 실패 시 폴백 배경이 그대로 노출된다.
+    const img = v.photo
+      ? `<img class="store-card-img" src="assets/shops/${v.photo}" alt="" onerror="this.style.display='none'" />`
+      : "";
     return `
-      <div class="store-card">
-        <div class="store-card-photo">
-          <span class="new-open-badge">NEW OPEN</span>
+      <div class="store-bubble-wrap">
+        <div class="store-card">
+          <div class="store-card-photo">
+            <span class="store-card-fallback">&#127976;</span>
+            ${img}
+            <span class="new-open-badge">NEW OPEN</span>
+          </div>
+          <div class="store-card-body">
+            <b>${v.openedName}</b>
+            <span>${industry}<span class="store-dist" data-lat="${v.lat}" data-lng="${v.lng}"></span></span>
+            <a class="store-card-more">자세히 보기 &rsaquo;</a>
+          </div>
         </div>
-        <div class="store-card-body">
-          <b>${v.openedName}</b>
-          <span>${v.votes[0]?.industry || "매장"} · 투표 ${total}명 참여</span>
-          <a class="store-card-more">자세히 보기 &rsaquo;</a>
+        <div class="store-detail" hidden>
+          <button class="store-detail-back" title="접기">&lsaquo;</button>
+          <div class="sd-row"><small>영업 시간</small><p>${v.hours || "정보 없음"}</p></div>
+          <div class="sd-row"><small>위치</small><p>${v.address || v.addr || "정보 없음"}</p></div>
+          <div class="sd-row"><small>소개</small><p>${v.intro || "소개 정보가 아직 없어요."}</p></div>
+          <button class="btn-coupon-detail">&#127915; 쿠폰 받기</button>
         </div>
       </div>`;
   }
@@ -80,14 +95,8 @@ function createVacancyOverlay(v) {
     <div class="overlay-bubble">${vacancyBubbleHTML(v, view)}</div>
   `;
 
-  // 빈 상가/투표 중 → 투표 패널, 공사 중/개업 → 매장 패널(쿠폰)
-  content.onclick = () => {
-    if (v.status === "open" || v.status === "construction") {
-      openStorePanel(v);
-    } else {
-      openPanel(v);
-    }
-  };
+  // 핀 클릭 → 사이드바 진입점은 제거(v3: 투표는 공실 단위가 아니라 동네 단위).
+  // 마커에는 호버 말풍선만. 창업 매장만 말풍선 안 "자세히 보기"로 2차 말풍선을 연다.
 
   const overlay = new kakao.maps.CustomOverlay({
     position,
@@ -100,7 +109,103 @@ function createVacancyOverlay(v) {
   content.addEventListener("mouseenter", () => overlay.setZIndex(100));
   content.addEventListener("mouseleave", () => overlay.setZIndex(10));
 
+  if (v.status === "open") {
+    wireStoreBubble(content, v);
+  }
+
   return overlay;
+}
+
+/** 열린 2차 말풍선(pinned) 모두 닫기 */
+function closePinnedBubbles() {
+  document.querySelectorAll(".vacancy-overlay.pinned").forEach((el) => {
+    el.classList.remove("pinned");
+    const d = el.querySelector(".store-detail");
+    if (d) d.hidden = true;
+  });
+}
+
+// 말풍선 바깥(지도 등) 클릭 시 열린 2차 말풍선 닫기.
+// 말풍선 내부 클릭은 stopPropagation 하므로 여기까지 오지 않는다.
+document.addEventListener("click", closePinnedBubbles);
+
+/** 창업 매장 말풍선: 자세히 보기(2차 열기·고정) · 접기 · 쿠폰 받기 핸들러 */
+function wireStoreBubble(content, v) {
+  const wrap = content.querySelector(".store-bubble-wrap");
+  const detail = content.querySelector(".store-detail");
+  const moreBtn = content.querySelector(".store-card-more");
+  const backBtn = content.querySelector(".store-detail-back");
+  const couponBtn = content.querySelector(".btn-coupon-detail");
+
+  if (moreBtn && detail && wrap) {
+    moreBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closePinnedBubbles();          // 다른 핀의 열린 말풍선은 닫고
+      content.classList.add("pinned"); // 이 말풍선을 고정 → 호버가 끊겨도 유지(쿠폰까지 클릭 가능)
+      detail.hidden = false;
+      // 뷰포트 오른쪽으로 넘치면 왼쪽에 붙인다
+      wrap.classList.remove("flip-left");
+      const rect = detail.getBoundingClientRect();
+      if (rect.right > window.innerWidth - 8) wrap.classList.add("flip-left");
+    });
+  }
+  if (backBtn && detail) {
+    backBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      detail.hidden = true;
+      content.classList.remove("pinned");
+    });
+  }
+  if (couponBtn) {
+    couponBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (typeof claimCouponFor === "function") claimCouponFor(v);
+    });
+  }
+}
+
+// =========================================================
+// 내 위치 → 매장 거리 ("현재 위치에서 N M")
+//  기본 API = 브라우저 Geolocation. 거부/미지원 시 거리 생략(업종만 표시).
+// =========================================================
+let myLoc = null;
+
+function distanceMeters(a, b) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function formatDistance(m) {
+  return m < 1000 ? `${Math.round(m)}M` : `${(m / 1000).toFixed(1)}KM`;
+}
+
+/** 현재 떠 있는 모든 매장 말풍선의 거리 텍스트를 갱신 */
+function updateStoreDistances() {
+  if (!myLoc) return;
+  document.querySelectorAll(".store-dist").forEach((el) => {
+    const lat = parseFloat(el.dataset.lat);
+    const lng = parseFloat(el.dataset.lng);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+    el.textContent = `현재 위치에서 ${formatDistance(distanceMeters(myLoc, { lat, lng }))}`;
+  });
+}
+
+function requestMyLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      myLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      updateStoreDistances();
+    },
+    () => {},                       // 거부/실패 → 거리 생략(에러 표시 안 함)
+    { timeout: 8000, maximumAge: 300000 }
+  );
 }
 
 let overlays = [];
@@ -112,6 +217,7 @@ function renderVacancies(vacancies) {
     overlay.setMap(map);
     return overlay;
   });
+  updateStoreDistances(); // 위치를 이미 알고 있으면 즉시 채움
 }
 
 /** 투표 등으로 상가 상태가 바뀐 뒤 오버레이 다시 그리기 */
@@ -130,11 +236,12 @@ async function boot() {
   window.__vacancies = vacancies; // 내 명당 "이동하기"에서 참조
 
   if (KAKAO_APP_KEY === "YOUR_APP_KEY") {
+    // 키 없음: 지도 대신 회색 placeholder만(패널은 상단 버튼으로만 진입 — 핀 클릭 사이드바 제거됨)
     document.getElementById("map").classList.add("map-placeholder");
-    openPanel(vacancies[0]);
     return;
   }
 
+  requestMyLocation(); // "현재 위치에서 N M" 계산용 (거부해도 나머지는 정상)
   loadKakaoSDK(KAKAO_APP_KEY, () => {
     initMap();
     renderVacancies(vacancies);

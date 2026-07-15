@@ -31,14 +31,3 @@ const BACKEND_BASE_URL = "http://localhost:8000";
 // 리포트의 거리감쇠(500~800m)가 0으로 죽지 않는다. 프론트 지도 중심(MAP_CENTER, 포항 중앙동)과는
 // 별개 — 지도 표시(목업 공실)와 실제 동네 투표 위치는 다른 동네라서 분리해뒀다.
 const NEIGHBORHOOD_VOTE_LOCATION = { lat: 36.0521, lng: 129.3612 };
-
-// ===== 냥(엽전) 정책 =====
-const DEFAULT_COINS = 50;        // 가입 시 기본 지급
-const COINS_PER_PAYMENT = 100;   // 1,000원 결제 시 충전되는 냥
-const PAYMENT_KRW = 1000;        // 1회 결제 금액(원)
-const VOTE_COST = 100;           // 공실(건물) 투표 1회 차감 — 목업 플로우 전용
-const REPORT_COST = 50;          // AI 리포트 생성 차감
-
-// ===== 10,000원 투표(실결제, 냥과 무관) =====
-const PAID_VOTE_KRW = 10000;         // "10,000원 투표하기" 결제 금액
-const PAID_VOTE_COUPON_KRW = 12000;  // 창업 확정 시 교환되는 업종 이용권 금액
