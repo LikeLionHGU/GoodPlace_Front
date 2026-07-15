@@ -264,8 +264,11 @@ function updateSelectedCount() {
 
 document.getElementById("btn-submit-vote-select").onclick = () => {
   if (selectedIndustries.size === 0) return;
-  if (needCharge(VOTE_COST, () => document.getElementById("btn-submit-vote-select").onclick())) return;
+  // 실제 백엔드는 업종 1개당 100냥 고정 차감(1,000원) — 선택 개수에 비례해서 확인해야 한다.
+  const cost = NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY * selectedIndustries.size;
+  if (needCharge(cost, () => document.getElementById("btn-submit-vote-select").onclick())) return;
   document.getElementById("vs-confirm-current").innerText = `${me.coins}냥`;
+  document.getElementById("vs-confirm-need").innerText = `${cost}냥`;
   openModal("modal-vote-select-confirm");
 };
 
@@ -274,6 +277,7 @@ document.getElementById("btn-vote-select-confirm-ok").onclick = async () => {
   try {
     const r = await postNeighborhoodVoteBatch([...selectedIndustries]);
     neighborhood.votes = r.votes;
+    neighborhood.myVotes = r.myVotes;
     me.coins = r.coins;
     renderTopbar();
     selectedIndustries.clear();
@@ -528,7 +532,7 @@ function renderCandidateReportBody() {
 
   const breakdownHtml = c.breakdown.map((b) => `
     <div class="rp-row">
-      <span class="rp-row-label">${b.label} <small>가중 ${b.weight}%</small></span>
+      <span class="rp-row-label">${b.label}${b.weight != null ? ` <small>가중 ${b.weight}%</small>` : ""}</span>
       <div class="rp-bar"><div class="rp-bar-fill" style="width:${b.score}%"></div></div>
       <span class="rp-row-desc">${b.detail}</span>
     </div>
@@ -572,7 +576,7 @@ function renderCandidateReportBody() {
     <div class="accordion open">
       <button class="accordion-head"><span>이 추천의 근거</span><i class="chev">&#8964;</i></button>
       <div class="accordion-body">
-        <p class="rp-formula">적합도 ${c.fitScore}% = 아래 4개를 가중 합산</p>
+        <p class="rp-formula">종합 적합도 ${c.fitScore}% — 아래 4개 요소를 반영해 산출</p>
         ${breakdownHtml}
         <p class="rp-disclaimer">명당은 성공을 보장하지 않습니다. 검증된 수요와 개업일 첫 손님까지가 명당의 책임이며, 이후 운영·품질은 창업자의 몫입니다.</p>
       </div>

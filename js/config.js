@@ -15,14 +15,26 @@ const MAP_CENTER = { lat: 36.0416, lng: 129.3661 };
 // 4: 개별 상가 건물 + 동(洞) 이름이 함께 보이는 레벨
 const MAP_LEVEL = 4;
 
-// 백엔드 API 준비되면 이 값을 true로 바꾸고 vacancies.js의
-// fetchVacancies()를 실제 fetch(API_BASE_URL + "/vacancies")로 교체
+// 공실(건물) 단위 투표·쿠폰·개별 리포트 — 백엔드가 이 데이터 자체를 갖고 있지 않음
+// (v3 "동네 투표 전환"으로 폐기된 모델). 시연용으로 계속 목업 유지.
 const USE_MOCK_DATA = true;
-const API_BASE_URL = "http://localhost:8000/api"; // 백엔드 담당자와 포트 맞추기
+const API_BASE_URL = "http://localhost:8000/api"; // 실제로 쓰이지 않음(위 이유) — 참고용으로 남겨둠
+
+// ===== 동네 투표·리포트(헤더 "투표하기"/"동네 현황") — 실제 백엔드 v3 연동 =====
+// 라우트에 /api 접두사가 없다("/regions", "/votes/batch", "/report" 등 루트 경로).
+const NEIGHBORHOOD_USE_MOCK = false;
+const BACKEND_BASE_URL = "http://localhost:8000";
+
+// 백엔드 시드 지역(양덕동, 47111-YANGDEOK-TEMP)이 유일한 동네라 GET /regions로 자동 조회해서 쓴다.
+// 동네 투표 제출 시 쓰는 좌표 — 백엔드 시드 공실들(양덕동, 36.05/129.36 부근) 반경 안에 있어야
+// 리포트의 거리감쇠(500~800m)가 0으로 죽지 않는다. 프론트 지도 중심(MAP_CENTER, 포항 중앙동)과는
+// 별개 — 지도 표시(목업 공실)와 실제 동네 투표 위치는 다른 동네라서 분리해뒀다.
+const NEIGHBORHOOD_VOTE_LOCATION = { lat: 36.0521, lng: 129.3612 };
 
 // ===== 냥(엽전) 정책 =====
 const DEFAULT_COINS = 50;        // 가입 시 기본 지급
 const COINS_PER_PAYMENT = 100;   // 1,000원 결제 시 충전되는 냥
 const PAYMENT_KRW = 1000;        // 1회 결제 금액(원)
-const VOTE_COST = 100;           // 투표 1회 차감
+const VOTE_COST = 100;           // 공실(건물) 투표 1회 차감 — 목업 플로우 전용
+const NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY = 100; // 동네 투표 1업종당 차감(백엔드 1,000원=100냥 고정과 일치)
 const REPORT_COST = 50;          // AI 리포트 생성 차감
