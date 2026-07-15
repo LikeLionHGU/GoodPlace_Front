@@ -16,8 +16,8 @@ const MAP_CENTER = { lat: 36.0416, lng: 129.3661 };
 const MAP_LEVEL = 4;
 
 // 공실(건물) 단위 투표·쿠폰·개별 리포트 — 백엔드가 이 데이터 자체를 갖고 있지 않음
-// (v3 "동네 투표 전환"으로 폐기된 모델). 시연용으로 계속 목업 유지.
-const USE_MOCK_DATA = false;
+// (v3 "동네 투표 전환"으로 폐기된 모델). 시연용으로 계속 목업 유지 → 반드시 true.
+const USE_MOCK_DATA = true;
 const API_BASE_URL = "http://localhost:8000/api"; // 동네주문-백엔드(FastAPI)가 이 주소에 떠 있어야 함
 
 // ===== 동네 투표·리포트(헤더 "투표하기"/"동네 현황") — 실제 백엔드 v3 연동 =====
