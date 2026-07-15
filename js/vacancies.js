@@ -103,9 +103,15 @@ let _industriesCache = null;
 /** GET /industries - 실제 업종 목록(6종). 대분류 없이 평평한 목록이라 캐시해서 재사용. */
 async function getIndustries() {
   if (_industriesCache) return _industriesCache;
-  const res = await fetch(`${BACKEND_BASE_URL}/industries`);
-  if (!res.ok) throw new Error("업종 목록 로드 실패: " + res.status);
-  _industriesCache = await res.json();
+  // 임시: 목업 데이터 반환 (백엔드 연동 전)
+  _industriesCache = [
+    { id: 1, name: "햄버거" },
+    { id: 2, name: "한식" },
+    { id: 3, name: "분식" },
+    { id: 4, name: "중식" },
+    { id: 5, name: "디저트 카페" },
+    { id: 6, name: "베이커리" }
+  ];
   return _industriesCache;
 }
 
