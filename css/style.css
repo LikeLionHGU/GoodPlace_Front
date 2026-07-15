@@ -608,22 +608,36 @@ main {
 .vote-select-footer {
   margin-top: 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: stretch;
+  gap: 10px;
 }
-#selected-count { font-size: 13px; color: #777; }
-#btn-submit-vote-select {
-  padding: 12px 28px;
-  border: none;
+.vote-select-footer button {
+  flex: 1;
+  padding: 12px 20px;
   border-radius: 8px;
-  background: #C62827;
-  color: #fff;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
 }
-#btn-submit-vote-select:disabled {
-  background: #ddd;
+#btn-free-vote {
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #333;
+}
+#btn-free-vote:hover:not(:disabled) {
+  border-color: #C62827;
+  color: #C62827;
+}
+#btn-paid-vote {
+  background: #C62827;
+  border: none;
+  color: #fff;
+}
+#btn-free-vote:disabled,
+#btn-paid-vote:disabled {
+  background: #f2f2f2;
+  border-color: #eee;
+  color: #bbb;
   cursor: default;
 }
 
@@ -933,6 +947,28 @@ main {
   filter: brightness(0.95);
 }
 
+/* 10,000원 투표 확인 모달 */
+.paid-vote-desc {
+  margin-top: 4px;
+  font-size: 15px;
+  color: #222;
+  line-height: 1.6;
+}
+.paid-vote-desc b {
+  color: #C62827;
+}
+.modal-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+.modal-divider {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 0 0 14px;
+}
+
 /* 로딩 스피너 */
 .spinner {
   width: 36px;
@@ -1132,7 +1168,7 @@ main {
   color: #aaa;
 }
 
-/* ===== 모달 안 빨간 원 + 흰 타겟 아이콘 (투표하기/투자하기 확인) ===== */
+/* ===== 모달 안 빨간 원 + 흰 타겟 아이콘 (투표하기 확인) ===== */
 .target-icon-circle {
   width: 44px;
   height: 44px;

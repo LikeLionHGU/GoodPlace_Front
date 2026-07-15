@@ -1,0 +1,5 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="18" cy="22" r="12" fill="#ADB6BD"/>
+<circle cx="18" cy="22" r="7.5" fill="#fff"/>
+<path d="M31 10v10M34 10v6.5a3 3 0 002 2.8V32M28 10v6.5a3 3 0 01-2 2.8V32" stroke="#ADB6BD" stroke-width="2" stroke-linecap="round" fill="none"/>
+</svg>
