@@ -1,89 +1,64 @@
 // =========================================================
-// 로그인/회원가입 페이지 동작
+// 로그인 페이지 - 휴대폰 인증 (플로우 목업)
+//  전화번호 입력 → 인증번호 받기 → 인증번호 입력 칸 노출 → 인증 → 로그인
+//  실제 SMS 발송/검증은 없음(데모). 인증 성공 시 전화번호를 세션으로 저장.
 // =========================================================
 
 // 이미 로그인돼 있으면 바로 지도로
 if (currentUser()) location.href = "index.html";
 
-const loginFormEl = document.getElementById("login-form");
-const signupFormEl = document.getElementById("signup-form");
+const phoneInput = document.getElementById("phone-input");
+const codeSection = document.getElementById("code-section");
+const codeInput = document.getElementById("code-input");
+const btnSend = document.getElementById("btn-send-code");
+const btnVerify = document.getElementById("btn-verify");
 
 function showError(id, msg) {
   document.getElementById(id).innerText = msg || "";
 }
 
-// ----- 로그인 ↔ 회원가입 전환 -----
-document.getElementById("goto-signup").onclick = (e) => {
-  e.preventDefault();
-  loginFormEl.hidden = true;
-  signupFormEl.hidden = false;
-  showError("signup-error", "");
-};
-document.getElementById("goto-login").onclick = (e) => {
-  e.preventDefault();
-  signupFormEl.hidden = true;
-  loginFormEl.hidden = false;
-  showError("login-error", "");
-};
-
-// ----- 로그인 -----
-async function doLogin() {
-  const id = document.getElementById("login-id").value.trim();
-  const pw = document.getElementById("login-pw").value;
-  if (!id || !pw) {
-    showError("login-error", "아이디와 비밀번호를 입력해주세요.");
-    return;
-  }
-  try {
-    const user = await postLogin(id, pw);
-    setSession(user.id);
-    location.href = "index.html";
-  } catch (err) {
-    showError("login-error", err.message);
-  }
+/** 숫자만 남기기 */
+function digits(v) {
+  return (v || "").replace(/[^0-9]/g, "");
 }
-document.getElementById("btn-login").onclick = doLogin;
-document.getElementById("login-pw").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") doLogin();
-});
 
-// ----- 회원가입 -----
-document.getElementById("btn-signup").onclick = async () => {
-  const nickname = document.getElementById("signup-nickname").value.trim();
-  const id = document.getElementById("signup-id").value.trim();
-  const pw = document.getElementById("signup-pw").value;
-  const pw2 = document.getElementById("signup-pw2").value;
+// ----- 인증번호 받기 (목업: 실제 발송 없음) -----
+btnSend.onclick = () => {
+  const phone = digits(phoneInput.value);
+  if (phone.length < 10) {
+    showError("phone-error", "휴대폰 번호를 정확히 입력해주세요.");
+    return;
+  }
+  showError("phone-error", "");
 
-  if (!nickname || !id || !pw) {
-    showError("signup-error", "모든 칸을 입력해주세요.");
-    return;
-  }
-  if (pw.length < 4) {
-    showError("signup-error", "비밀번호는 4자 이상으로 해주세요.");
-    return;
-  }
-  if (pw !== pw2) {
-    showError("signup-error", "비밀번호가 서로 달라요.");
-    return;
-  }
-  try {
-    const user = await postSignup(id, pw, nickname);
-    setSession(user.id);
-    location.href = "index.html";
-  } catch (err) {
-    showError("signup-error", err.message);
-  }
+  // 인증번호 입력 영역 노출
+  codeSection.hidden = false;
+  btnVerify.hidden = false;
+  btnSend.innerText = "인증번호 재전송";
+  showError("code-error", "");
+  document.getElementById("code-hint").innerText =
+    "인증번호를 발송했어요. (데모: 숫자 6자리 아무거나 입력)";
+  codeInput.focus();
 };
 
-// ----- 계정찾기 / 비밀번호 찾기 (추후 연동) -----
-["find-account", "find-password"].forEach((id) => {
-  document.getElementById(id).onclick = (e) => {
-    e.preventDefault();
-    alert("추후 지원 예정인 기능이에요.");
-  };
-});
+// ----- 인증 (목업: 6자리면 통과) -----
+function doVerify() {
+  const code = digits(codeInput.value);
+  if (code.length !== 6) {
+    showError("code-error", "인증번호 6자리를 입력해주세요.");
+    return;
+  }
+  showError("code-error", "");
+  const phone = digits(phoneInput.value);
+  setSession(phone);       // 인증 완료 → 전화번호로 로그인
+  location.href = "index.html";
+}
+btnVerify.onclick = doVerify;
 
-// ----- 소셜 로그인 (추후 연동) -----
-document.querySelectorAll(".login-social .social").forEach((btn) => {
-  btn.onclick = () => alert("소셜 로그인은 추후 연동 예정이에요. 지금은 아이디로 가입해주세요!");
+// ----- 편의: 엔터 키 -----
+phoneInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") btnSend.click();
+});
+codeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") doVerify();
 });
