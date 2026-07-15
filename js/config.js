@@ -5,7 +5,7 @@
 // 카카오 디벨로퍼스(developers.kakao.com) > 내 애플리케이션 > 앱 키
 // 에서 발급받은 "JavaScript 키"를 아래에 붙여넣으세요.
 // (REST API 키 아님! JavaScript 키여야 지도가 뜹니다)
-const KAKAO_APP_KEY = "7b04a263461d5b09e5c2f41cb6371e16";
+const KAKAO_APP_KEY = "18980555b4a76c2a531af617c15b0345";
 
 // 지도 중심 좌표 - 포항 중앙상가 육거리 (카카오 지오코딩 확인 좌표)
 // 시연 지역을 바꾸려면 이 좌표와 vacancies.js의 상가 좌표를 함께 수정

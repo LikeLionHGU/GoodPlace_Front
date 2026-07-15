@@ -36,22 +36,6 @@
   align-items: center;
   gap: 20px;
 }
-/* 냥 잔액: 빨간 알약 + 흰 엽전 아이콘 + 흰 글씨 */
-#coin-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 40px;
-  padding: 0 18px;
-  border-radius: 20px;
-  background: #C62827;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-}
-#coin-count img {
-  width: 19px;
-}
 .profile-icon {
   width: 32px;
   height: 32px;
@@ -340,6 +324,68 @@ main {
   display: block;
 }
 
+/* ===== AI 레포트 A/B/C 공실 위치 마커 (js/map.js showCandidateMarkers) ===== */
+.cand-marker {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #999;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  font-family: "Pretendard", "Malgun Gothic", sans-serif;
+}
+.cand-marker.active {
+  width: 42px;
+  height: 42px;
+  font-size: 16px;
+  background: #C62827;
+}
+
+/* ===== 동네 현황: 지도 위 업종 핀(데모 시각화, js/map.js의 NEIGHBORHOOD_ZONE) ===== */
+.zone-pin {
+  position: relative;
+  cursor: default;
+}
+.zone-pin-icon {
+  width: 44px;
+  height: 44px;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+.zone-pin-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  min-width: 140px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  text-align: left;
+  display: none;
+  z-index: 21;
+}
+.zone-pin:hover .zone-pin-bubble {
+  display: block;
+}
+.zone-pin-bubble b {
+  display: block;
+  font-size: 14px;
+  color: #000;
+}
+.zone-pin-bubble span {
+  font-size: 12px;
+  color: #555;
+}
+
 /* 빈 상가 / 공사 중 말풍선 툴팁 */
 .tooltip-card {
   position: relative;
@@ -420,9 +466,11 @@ main {
 }
 
 /* ===== 좌측 패널 공통 ===== */
-#vote-panel, #my-panel, #store-panel, #neighborhood-panel {
+#vote-panel, #my-panel, #store-panel, #neighborhood-panel, #report-modal {
   position: absolute;
-  top: 12px;
+  /* 헤더 버튼 줄(top:12px + 버튼 높이 약 48px) 밑으로 띄워서, 패널이 열려있어도
+     "투자하기/나의 명당/동네 현황" 버튼이 항상 보이게 한다(더 이상 숨길 필요 없음). */
+  top: 74px;
   left: 12px;
   bottom: 12px;
   width: 250px;
@@ -436,7 +484,17 @@ main {
   flex-direction: column;
   overflow: hidden;
 }
-#vote-panel[hidden], #my-panel[hidden], #store-panel[hidden], #neighborhood-panel[hidden] {
+/* AI 리포트는 내용이 densely하니 좀 더 넓게 - 오른쪽엔 지도가 그대로 보인다 */
+#report-modal {
+  width: min(460px, 92vw);
+}
+/* 리스트+버튼이 같이 있는 패널: 목록만 스크롤되고 하단 버튼(.panel-actions)은 항상 보이게 고정 */
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+#vote-panel[hidden], #my-panel[hidden], #store-panel[hidden], #neighborhood-panel[hidden], #report-modal[hidden] {
   display: none;
 }
 
@@ -954,12 +1012,23 @@ main {
   border-radius: 8px;
 }
 
-/* ===== AI 리포트 모달 ===== */
+/* ===== AI 리포트 패널 (왼쪽 도킹, 폭/스크롤은 #report-modal/.panel-scroll이 담당) ===== */
 .report-card {
-  width: min(920px, 94vw);
-  max-height: 88vh;
-  overflow-y: auto;
   text-align: left;
+}
+/* 원래 920px 폭의 2단 대시보드로 만들어져서, 460px 왼쪽 패널 안에서는 1단으로 쌓는다 */
+#report-modal .rp2-tiles {
+  grid-template-columns: repeat(2, 1fr);
+}
+#report-modal .rp2-grid {
+  grid-template-columns: 1fr;
+}
+#report-modal .rp2-hero {
+  flex-direction: column;
+  align-items: flex-start;
+}
+#report-modal .rp2-demand-split {
+  flex-direction: column;
 }
 .report-kicker {
   margin: 0;
@@ -1337,12 +1406,6 @@ main {
   font-size: 12px;
   color: #888;
 }
-.cond-group-title {
-  margin: 10px 0 4px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #555;
-}
 .cond-row {
   display: flex;
   align-items: center;
@@ -1472,6 +1535,42 @@ main {
   color: #C62827;
 }
 
+/* 무료 투표 / 만원 투표(선결제) 수요를 나란히 보여주는 가로 2분할 (데모 목업) */
+.rp2-demand-split {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rp2-demand-box {
+  flex: 1;
+  border: 1px solid #eee;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rp2-demand-box.highlight {
+  border-color: #f0dede;
+  background: #fdf6f6;
+}
+.rp2-demand-box small {
+  font-size: 12px;
+  color: #888;
+}
+.rp2-demand-box b {
+  font-size: 22px;
+  color: #333;
+}
+.rp2-demand-box.highlight b {
+  color: #C62827;
+}
+.rp2-demand-box span {
+  font-size: 11px;
+  color: #999;
+}
+
 /* 2단 카드 그리드 */
 .rp2-grid {
   display: grid;
@@ -1522,44 +1621,11 @@ main {
   background: #C62827;
   border-radius: 100px;
 }
-
-/* 2·3순위 후보 + 경쟁 현황 */
-.rp2-runner {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
-  font-size: 13px;
-}
-.rp2-runner b {
-  color: #C62827;
-}
-.rp2-comps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 12px;
-}
-.rp2-comp {
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 10px 6px;
-  text-align: center;
-}
-.rp2-comp b {
-  display: block;
-  font-size: 20px;
-}
-.rp2-comp span {
+.rp2-row-detail {
+  margin: 6px 0 0;
   font-size: 12px;
-  color: #888;
-}
-.rp2-comp.good {
-  border-color: #C62827;
-  background: #fdf6f6;
-}
-.rp2-comp.good b {
-  color: #C62827;
+  color: #999;
+  line-height: 1.5;
 }
 
 /* 공실 정보 / 실무 참고 행 */
@@ -1586,6 +1652,9 @@ main {
     grid-template-columns: 1fr;
   }
   .rp2-hero {
+    flex-direction: column;
+  }
+  .rp2-demand-split {
     flex-direction: column;
   }
 }

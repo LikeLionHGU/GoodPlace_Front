@@ -24,6 +24,9 @@ function initMap() {
     center: new kakao.maps.LatLng(MAP_CENTER.lat, MAP_CENTER.lng),
     level: MAP_LEVEL
   });
+  // 목업 상가가 한 동네 범위에만 있어서, 줌아웃하면 마커가 도시 전체로 흩어져
+  // 툴팁 카드끼리 겹쳐 보인다. 데모 동네 스케일 밖으로 못 벌어지게 최대 레벨 제한.
+  map.setMaxLevel(6);
 }
 
 // 상태별 마커 아이콘 (디자이너 에셋: 빨강=개업, 흰색+빨강=빈상가, 흰색+렌치=공사중)
@@ -117,6 +120,152 @@ function renderVacancies(vacancies) {
 /** 투표 등으로 상가 상태가 바뀐 뒤 오버레이 다시 그리기 */
 function refreshOverlays() {
   if (map && window.__vacancies) renderVacancies(window.__vacancies);
+}
+
+// =========================================================
+// 동네 현황: 지도 위 동네 경계 + 업종별 핀 (데모 시각화)
+//  - 백엔드에 업종 대분류·좌표 집계가 없어(투자하기 흐름의 업종은 평평한 실제 목록),
+//    이 폴리곤/핀/인원수는 전부 데모용 목업이다. 아래 랭킹 리스트(실제 백엔드 데이터)와는 별개.
+//  - "동네 현황" 패널이 열려있는 동안만 표시하고, 패널을 닫으면 지도에서 지운다.
+// =========================================================
+// 폴리곤 반경을 실제 행정동 스케일(대략 1.5km 폭)로 잡음 - MAP_CENTER 기준 육각형
+const NEIGHBORHOOD_ZONE = {
+  polygon: [
+    { lat: 36.0491, lng: 129.3661 },
+    { lat: 36.0456, lng: 129.3736 },
+    { lat: 36.0376, lng: 129.3736 },
+    { lat: 36.0341, lng: 129.3661 },
+    { lat: 36.0376, lng: 129.3586 },
+    { lat: 36.0456, lng: 129.3586 }
+  ],
+  pins: [
+    { icon: "assets/cat-food-on.svg", label: "음식점", votes: 80, lat: 36.0450, lng: 129.3650 },
+    { icon: "assets/cat-cafe-on.svg", label: "카페", votes: 50, lat: 36.0430, lng: 129.3610 },
+    { icon: "assets/cat-leisure-on.svg", label: "여가시설", votes: 30, lat: 36.0460, lng: 129.3700 },
+    { icon: "assets/cat-retail-on.svg", label: "소매", votes: 45, lat: 36.0390, lng: 129.3700 },
+    { icon: "assets/cat-life-on.svg", label: "생활서비스", votes: 60, lat: 36.0400, lng: 129.3620 },
+    { icon: "assets/cat-medical-on.svg", label: "의료", votes: 25, lat: 36.0370, lng: 129.3661 }
+  ]
+};
+
+let neighborhoodPolygon = null;
+let neighborhoodPinOverlays = [];
+
+function showNeighborhoodZone() {
+  if (!map) return;
+  hideNeighborhoodZone();
+
+  // 목업 공실 핀은 동 단위 폴리곤과 스케일이 안 맞아 어수선해 보이므로, 동네 현황을 보는 동안은 숨긴다.
+  overlays.forEach((o) => o.setMap(null));
+
+  const path = NEIGHBORHOOD_ZONE.polygon.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
+  neighborhoodPolygon = new kakao.maps.Polygon({
+    path,
+    strokeWeight: 2,
+    strokeColor: "#C62827",
+    strokeOpacity: 0.9,
+    fillColor: "#C62827",
+    fillOpacity: 0.12
+  });
+  neighborhoodPolygon.setMap(map);
+
+  // 동 단위로 커진 폴리곤 전체가 보이게 지도 범위를 재조정 (닫을 때 원래 뷰로 복귀)
+  // 왼쪽 패널(250px)에 가려지는 영역을 감안해 왼쪽 패딩을 줘서, 폴리곤이 패널 밑에 깔리지 않게 한다.
+  const bounds = new kakao.maps.LatLngBounds();
+  path.forEach((p) => bounds.extend(p));
+  map.setBounds(bounds, 40, 40, 40, 280);
+
+  neighborhoodPinOverlays = NEIGHBORHOOD_ZONE.pins.map((pin) => {
+    const content = document.createElement("div");
+    content.className = "zone-pin";
+    content.innerHTML = `
+      <img class="zone-pin-icon" src="${pin.icon}" alt="${pin.label}" />
+      <div class="zone-pin-bubble">
+        <b>${pin.label}</b>
+        <span>${pin.votes}명이 투표했어요.</span>
+      </div>
+    `;
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(pin.lat, pin.lng),
+      content,
+      yAnchor: 0.5,
+      zIndex: 20
+    });
+    overlay.setMap(map);
+
+    // 호버한 핀의 말풍선이 이웃 핀에 가리지 않도록 맨 앞으로 올렸다가 원복
+    content.addEventListener("mouseenter", () => overlay.setZIndex(200));
+    content.addEventListener("mouseleave", () => overlay.setZIndex(20));
+
+    return overlay;
+  });
+}
+
+function hideNeighborhoodZone() {
+  if (!neighborhoodPolygon) return; // 이미 닫혀있으면 아무 것도 안 함 (지도 뷰/핀 복귀 중복 방지)
+
+  neighborhoodPolygon.setMap(null);
+  neighborhoodPolygon = null;
+  neighborhoodPinOverlays.forEach((o) => o.setMap(null));
+  neighborhoodPinOverlays = [];
+
+  // 동네 현황 보기 전 원래 뷰(공실 핀 + 기본 중심/레벨)로 복귀
+  overlays.forEach((o) => o.setMap(map));
+  map.setCenter(new kakao.maps.LatLng(MAP_CENTER.lat, MAP_CENTER.lng));
+  map.setLevel(MAP_LEVEL);
+}
+
+// =========================================================
+// AI 레포트: A/B/C 추천 공실 위치를 지도에 표시 (탭 전환 시 활성 마커만 강조)
+// =========================================================
+let candidateMarkerOverlays = [];
+
+function showCandidateMarkers(candidates, activeIndex) {
+  if (!map) return;
+  hideCandidateMarkers();
+
+  // 리포트 지도에는 A/B/C 후보 위치만 또렷하게 보여주고, 나머지 목업 공실 핀은 혼동을 피하려 숨긴다.
+  overlays.forEach((o) => o.setMap(null));
+
+  candidateMarkerOverlays = candidates.map((c, i) => {
+    const content = document.createElement("div");
+    content.className = "cand-marker" + (i === activeIndex ? " active" : "");
+    content.innerText = c.label;
+
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(c.lat, c.lng),
+      content,
+      yAnchor: 0.5,
+      zIndex: 50
+    });
+    overlay.setMap(map);
+    return overlay;
+  });
+
+  // 리포트 패널(460px)에 가려지는 영역을 감안해 왼쪽 패딩을 크게 줘서, A/B/C 핀이 패널 밑에 깔리지 않게 한다.
+  const bounds = new kakao.maps.LatLngBounds();
+  candidates.forEach((c) => bounds.extend(new kakao.maps.LatLng(c.lat, c.lng)));
+  map.setBounds(bounds, 40, 40, 40, 500);
+}
+
+/** 리포트 탭을 바꿔서 활성 후보가 바뀌었을 때, 지도 마커의 강조만 갱신 */
+function highlightCandidateMarker(activeIndex) {
+  candidateMarkerOverlays.forEach((overlay, i) => {
+    const el = overlay.getContent();
+    if (el) el.classList.toggle("active", i === activeIndex);
+  });
+}
+
+function hideCandidateMarkers() {
+  if (candidateMarkerOverlays.length === 0) return; // 이미 닫혀있으면 아무 것도 안 함 (핀 복귀 중복 방지)
+
+  candidateMarkerOverlays.forEach((o) => o.setMap(null));
+  candidateMarkerOverlays = [];
+
+  // 리포트 보기 전 원래 뷰(공실 핀 + 기본 중심/레벨)로 복귀
+  overlays.forEach((o) => o.setMap(map));
+  map.setCenter(new kakao.maps.LatLng(MAP_CENTER.lat, MAP_CENTER.lng));
+  map.setLevel(MAP_LEVEL);
 }
 
 // =========================================================

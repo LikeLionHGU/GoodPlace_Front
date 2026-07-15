@@ -6,15 +6,14 @@
   <title>명당 - 우리동네 공실 투표</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <!-- ?v= 숫자는 캐시 버스터: 파일 수정 후 화면에 반영 안 되면 숫자를 올리세요 -->
-  <link rel="stylesheet" href="css/style.css?v=28" />
+  <link rel="stylesheet" href="css/style.css?v=40" />
 </head>
 <body>
 
-  <!-- 상단 바: 서비스명 + 냥 잔액/프로필 -->
+  <!-- 상단 바: 서비스명 + 프로필 -->
   <header id="topbar">
     <h1><img src="assets/logo.svg" alt="명당" /></h1>
     <div class="topbar-right">
-      <span id="coin-count"><img src="assets/icon-coin-ring.svg" alt="냥" /> 50냥</span>
       <img class="profile-icon" src="assets/profile.svg" alt="내 정보" title="내 정보" />
     </div>
   </header>
@@ -44,27 +43,29 @@
     <aside id="vote-panel" hidden>
       <button class="btn-panel-back" data-close="vote-panel">&#8249;</button>
 
-      <section class="total-votes">
-        <p class="section-label">현재 투표수</p>
-        <p class="count"><span id="total-count">0</span> <small>명</small></p>
-      </section>
+      <div class="panel-scroll">
+        <section class="total-votes">
+          <p class="section-label">현재 투표수</p>
+          <p class="count"><span id="total-count">0</span> <small>명</small></p>
+        </section>
 
-      <section class="ranking">
-        <p class="section-label">투표 순위</p>
-        <div class="rank-header">
-          <span>업종</span><span>투표수</span><span>투표하기</span>
-        </div>
-        <ul id="rank-list"></ul>
-      </section>
+        <section class="ranking">
+          <p class="section-label">투표 순위</p>
+          <div class="rank-header">
+            <span>업종</span><span>투표수</span><span>투표하기</span>
+          </div>
+          <ul id="rank-list"></ul>
+        </section>
 
-      <section class="my-votes">
-        <p class="section-label">내 투표 보기</p>
-        <div id="my-vote-box" class="my-vote-box"></div>
-      </section>
+        <section class="my-votes">
+          <p class="section-label">내 투표 보기</p>
+          <div id="my-vote-box" class="my-vote-box"></div>
+        </section>
+      </div>
 
       <div class="panel-actions">
         <button id="btn-new-vote">새로운 업종 투표</button>
-        <button id="btn-report">AI레포트 생성 <small>(50냥)</small></button>
+        <button id="btn-report">AI레포트 생성</button>
       </div>
     </aside>
 
@@ -85,16 +86,16 @@
       </div>
     </aside>
 
-    <!-- 헤더 "투표하기" 클릭 시: 업종 카테고리/세부업종 다중 선택 패널 -->
+    <!-- 헤더 "투자하기" 클릭 시: 업종 카테고리/세부업종 다중 선택 패널 -->
     <div class="wide-panel" id="vote-select-panel" hidden>
       <div class="wide-panel-inner">
         <h2>우리 동네에 뭐가 생기면 좋을까요?</h2>
-        <p class="wide-panel-sub">업종을 골라 투표하세요 (여러 개 선택 가능)</p>
+        <p class="wide-panel-sub">업종을 골라 투자해보세요.</p>
 
         <div class="category-row" id="category-row"></div>
 
         <div class="subcategory-box">
-          <p class="subcategory-title"><b id="subcategory-cat-name"></b> 세부 업종을 눌러 선택</p>
+          <p class="subcategory-title"><b id="subcategory-cat-name"></b> 세부 업종을 눌러 투표해주세요.</p>
           <div class="subcategory-grid" id="subcategory-grid"></div>
         </div>
 
@@ -108,22 +109,24 @@
     <!-- 헤더 "동네 현황" 클릭 시: 동네 전체 투표 순위/내 투표 패널 -->
     <aside id="neighborhood-panel" hidden>
       <button class="btn-panel-back" data-close="neighborhood-panel">&#8249;</button>
-      <p class="section-label neighborhood-name">현재 동네: <b id="neighborhood-name"></b></p>
-      <select id="neighborhood-select">
-        <option>중앙동 (육거리)</option>
-      </select>
+      <div class="panel-scroll">
+        <p class="section-label neighborhood-name">현재 동네: <b id="neighborhood-name"></b></p>
+        <select id="neighborhood-select">
+          <option>육거리</option>
+        </select>
 
-      <p class="section-label">현재 투표 인원</p>
-      <p class="count"><span id="neighborhood-total">0</span> <small>명</small></p>
+        <p class="section-label">현재 투표 인원</p>
+        <p class="count"><span id="neighborhood-total">0</span> <small>명</small></p>
 
-      <p class="section-label">투표 순위</p>
-      <ul id="neighborhood-rank-list" class="rank-plain-list"></ul>
+        <p class="section-label">투표 순위</p>
+        <ul id="neighborhood-rank-list" class="rank-plain-list"></ul>
 
-      <p class="section-label">나의 투표</p>
-      <ul id="neighborhood-my-list" class="my-list"></ul>
+        <p class="section-label">나의 투표</p>
+        <ul id="neighborhood-my-list" class="my-list"></ul>
+      </div>
 
       <div class="panel-actions">
-        <button id="btn-neighborhood-report" class="primary">창업하기</button>
+        <button id="btn-neighborhood-report" class="primary">AI 레포트 생성하기</button>
       </div>
     </aside>
 
@@ -134,7 +137,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128499;</div>
         <h3>새로운 업종을 입력해주세요</h3>
-        <p class="modal-desc">투표하면 100냥이 차감됩니다.</p>
+        <p class="modal-desc">이 상가에 원하는 업종을 알려주세요.</p>
         <input type="text" id="new-industry-input" placeholder="ex. 김치찜, 삼겹살, 미용실" />
         <div class="modal-actions">
           <button data-close="modal-new-industry">취소</button>
@@ -148,7 +151,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128499;</div>
         <h3 id="vote-confirm-title">투표하시겠습니까?</h3>
-        <p class="modal-desc"><b>100냥</b>이 차감됩니다.<br/>가게가 생기면 쿠폰을 드려요. 불발 시 전액 환불!</p>
+        <p class="modal-desc">가게가 생기면 쿠폰을 드려요!</p>
         <div class="modal-actions">
           <button data-close="modal-vote-confirm">취소</button>
           <button class="primary" id="btn-vote-confirm-ok">투표</button>
@@ -156,12 +159,12 @@
       </div>
     </div>
 
-    <!-- 업종 다중 선택 투표 확인 -->
+    <!-- 업종 다중 선택 투자 확인 -->
     <div class="modal-backdrop anchored-topleft" id="modal-vote-select-confirm" hidden>
       <div class="modal-card">
         <div class="target-icon-circle"><span class="target-icon-mask"></span></div>
         <h3>투자하기</h3>
-        <p class="modal-desc">보유: <b id="vs-confirm-current">0냥</b> · 필요: <b id="vs-confirm-need">100냥</b></p>
+        <p class="modal-desc">선택한 업종에 투자할게요.</p>
         <div class="modal-actions">
           <button data-close="modal-vote-select-confirm">취소</button>
           <button class="primary" id="btn-vote-select-confirm-ok">투자하기</button>
@@ -169,29 +172,15 @@
       </div>
     </div>
 
-    <!-- 냥 부족 → 결제 -->
-    <div class="modal-backdrop" id="modal-charge" hidden>
-      <div class="modal-card">
-        <div class="modal-icon">&#129689;</div>
-        <h3>냥이 부족해요</h3>
-        <p class="modal-desc">보유: <b id="charge-current">0냥</b> · 필요: <b id="charge-need">100냥</b><br/>1,000원 결제 시 <b>100냥</b>이 충전됩니다.</p>
-        <div class="modal-actions">
-          <button data-close="modal-charge">취소</button>
-          <button class="primary" id="btn-charge-ok">1,000원 결제하기</button>
-        </div>
-        <p class="source">지금은 모의 결제 - 실제 결제 연동은 추후</p>
-      </div>
-    </div>
-
     <!-- AI 레포트 생성 확인 -->
     <div class="modal-backdrop" id="modal-report-confirm" hidden>
       <div class="modal-card">
-        <div class="modal-icon">&#128203;</div>
-        <h3>레포트를 생성하시겠습니까?</h3>
-        <p class="modal-desc"><b>50냥</b>이 차감됩니다.<br/>이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
+        <div class="target-icon-circle"><span class="target-icon-mask"></span></div>
+        <h3 id="report-confirm-title">레포트를 생성하시겠습니까?</h3>
+        <p class="modal-desc" id="report-confirm-desc">이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
         <div class="modal-actions">
           <button data-close="modal-report-confirm">취소</button>
-          <button class="primary" id="btn-report-confirm-ok">생성</button>
+          <button class="primary" id="btn-report-confirm-ok">생성하기</button>
         </div>
       </div>
     </div>
@@ -218,25 +207,25 @@
       </div>
     </div>
 
-    <!-- AI 창업 기회 리포트 -->
-    <div class="modal-backdrop" id="report-modal" hidden>
-      <div class="modal-card report-card">
-        <button id="btn-report-close" data-close="report-modal" title="닫기">&times;</button>
+    <!-- AI 창업 기회 리포트 - 왼쪽 패널로 열고, 오른쪽 지도에는 A/B/C 공실 위치를 표시 -->
+    <aside id="report-modal" hidden>
+      <button class="btn-panel-back" data-close="report-modal">&#8249;</button>
+      <div class="panel-scroll report-card">
         <p class="report-kicker">AI 창업 기회 리포트</p>
         <h2 id="report-title"></h2>
         <p id="report-addr" class="report-addr"></p>
         <div id="report-body"></div>
       </div>
-    </div>
+    </aside>
   </main>
 
   <!-- 설정 → 인증 → 데이터 → 패널 UI → 지도 로직 순서로 로드 -->
-  <script src="js/config.js?v=28"></script>
-  <script src="js/auth.js?v=28"></script>
+  <script src="js/config.js?v=30"></script>
+  <script src="js/auth.js?v=30"></script>
   <script>requireLogin();</script>
-  <script src="js/vacancies.js?v=28"></script>
-  <script src="js/panel.js?v=28"></script>
-  <script src="js/map.js?v=28"></script>
+  <script src="js/vacancies.js?v=42"></script>
+  <script src="js/panel.js?v=42"></script>
+  <script src="js/map.js?v=38"></script>
 
 </body>
 </html>

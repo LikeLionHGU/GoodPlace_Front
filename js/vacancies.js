@@ -103,15 +103,9 @@ let _industriesCache = null;
 /** GET /industries - 실제 업종 목록(6종). 대분류 없이 평평한 목록이라 캐시해서 재사용. */
 async function getIndustries() {
   if (_industriesCache) return _industriesCache;
-  // 임시: 목업 데이터 반환 (백엔드 연동 전)
-  _industriesCache = [
-    { id: 1, name: "햄버거" },
-    { id: 2, name: "한식" },
-    { id: 3, name: "분식" },
-    { id: 4, name: "중식" },
-    { id: 5, name: "디저트 카페" },
-    { id: 6, name: "베이커리" }
-  ];
+  const res = await fetch(`${BACKEND_BASE_URL}/industries`);
+  if (!res.ok) throw new Error("업종 목록 로드 실패: " + res.status);
+  _industriesCache = await res.json();
   return _industriesCache;
 }
 
@@ -129,7 +123,7 @@ async function getPrimaryRegionCode() {
 
 // region_code(예: "47111-YANGDEOK-TEMP")는 표시용 이름이 아니라서 사람이 읽을 이름으로 매핑.
 // 목록에 없는 코드는 코드 그대로 보여준다(신규 동네가 추가돼도 깨지지 않게).
-const REGION_DISPLAY_NAMES = { "47111-YANGDEOK-TEMP": "양덕동" };
+const REGION_DISPLAY_NAMES = { "47111-YANGDEOK-TEMP": "육거리" };
 function friendlyRegionName(regionCode) {
   return REGION_DISPLAY_NAMES[regionCode] || regionCode;
 }
@@ -381,9 +375,15 @@ async function postNeighborhoodReport() {
 
     const FIT_SCORES = [82, 74, 69];
     const ADDR_SAMPLES = [
-      "경상북도 포항시 북구 양덕로 (예시 주소)",
+      "경상북도 포항시 북구 육거리 (예시 주소)",
       "경상북도 포항시 북구 중앙로 (예시 주소)",
       "경상북도 포항시 북구 죽도로 (예시 주소)"
+    ];
+    // 지도에 A/B/C 위치 표시용 - 실제 좌표가 없는 목업 경로라 MAP_CENTER 근방에 임의 배치
+    const LATLNG_SAMPLES = [
+      { lat: MAP_CENTER.lat + 0.002, lng: MAP_CENTER.lng + 0.001 },
+      { lat: MAP_CENTER.lat - 0.001, lng: MAP_CENTER.lng + 0.002 },
+      { lat: MAP_CENTER.lat + 0.001, lng: MAP_CENTER.lng - 0.002 }
     ];
     const region = MOCK_NEIGHBORHOOD.name.split(" ")[0];
 
@@ -395,6 +395,8 @@ async function postNeighborhoodReport() {
       return {
         label: String.fromCharCode(65 + i), // A, B, C
         name: `${region} ${String.fromCharCode(65 + i)}공실`,
+        lat: LATLNG_SAMPLES[i].lat,
+        lng: LATLNG_SAMPLES[i].lng,
         addr: ADDR_SAMPLES[i],
         area: "33㎡ (10평)",
         floor: "1층",
@@ -468,33 +470,84 @@ async function postNeighborhoodReport() {
 
   MOCK_ME.coins -= REPORT_COST; // 위 postNeighborhoodVoteBatch와 동일한 이유로 목업 잔액에서만 차감
 
+  // "공실 기간"/"보증금 월세"/"유동 인구"/시설 조건 - 백엔드에 중개사 등록 기능이 아직 없어서(후순위),
+  // 이미 중개사가 이 공실 정보를 입력해줬다고 가정하고 채운다. AI가 지어낸 수치가 아니라
+  // "중개사 입력"(source: "agent", 주황 점) 데이터 소스로 명확히 구분해서 보여준다.
+  const FOOT_TRAFFIC_SAMPLES = ["보통", "많음", "적음"];
+
+  // 백엔드 industries 테이블에 licenses 컬럼이 없어 rep.reference.licenses는 항상 "확인 필요"로만 온다.
+  // 업종별 필요 인허가는 업종 유형만 알면 되는 공개 정보라, 프론트에서 업종명 기준으로 채워 보여준다.
+  const LICENSE_BY_INDUSTRY = {
+    "카페": "휴게음식점 영업신고 · 사업자등록",
+    "베이커리": "즉석판매제조가공업 신고 · 사업자등록",
+    "분식": "일반음식점 영업신고 · 사업자등록",
+    "서점문구": "별도 인허가 없음(사업자등록만)",
+    "반찬": "즉석판매제조가공업 신고 · 사업자등록",
+    "과일": "별도 인허가 없음(사업자등록만)"
+  };
+
+  // 시설 항목 표시 문구 - 있으면 "가능 · 상세비고", 없으면 그냥 "불가"(비고 붙일 게 없음).
+  function facilityText(field, okWord = "가능", noWord = "불가") {
+    if (!field.value) return noWord;
+    return field.detail ? `${okWord} · ${field.detail}` : okWord;
+  }
+
   const candidates = reports.map((rep, i) => {
     const top = rep.vacancies[0];
     const areaM2 = top.area_fit.area_m2.value;
+    const deposit = 500 + i * 300;
+    const monthlyRent = 40 + i * 10;
+
+    // "AI가 이렇게 판단했어요" 상단 요약문 - 개별 데이터(수요·경쟁·면적·층)는 각 막대 아래
+    // detail로 따로 보여주므로, 여기서는 중복 없이 "결론 + 2순위 대비 격차"만 짧게 정리한다.
+    const [minArea, maxArea] = top.area_fit.industry_range_m2;
+    const areaFitGood = top.area_fit.score01 >= 0.99;
+    const verdict = top.adequacy_pct >= 40
+      ? "네 가지 조건을 종합하면 적극 추천할 만한 자리예요."
+      : top.adequacy_pct >= 25
+        ? "네 가지 조건을 종합하면 검토해볼 만한 괜찮은 후보예요."
+        : "네 가지 조건을 종합하면 가능성은 있지만 다른 후보와 비교해보는 걸 추천해요.";
+    // 실제로는 "다른 업종"이 아니라 "같은 업종의 2·3순위 공실"이다(필드명은 UI 재사용 위해 유지).
+    const runnerUps = rep.vacancies.slice(1, 3).map((c) => ({ industry: c.vacancy.name, pct: c.adequacy_pct }));
+    const rankGapText = runnerUps.length > 0
+      ? ` 같은 업종의 2순위 후보(${runnerUps[0].industry}, 적합도 ${runnerUps[0].pct}%)보다 ${top.adequacy_pct - runnerUps[0].pct}%p 더 높아 1순위로 뽑혔어요.`
+      : "";
+    const demandDesc = `${verdict}${rankGapText}`;
+
     return {
       label: String.fromCharCode(65 + i), // A, B, C
       name: top.vacancy.name,
+      lat: top.vacancy.lat,
+      lng: top.vacancy.lng,
       addr: top.vacancy.address.value,
       area: `${areaM2}㎡ (${Math.round(areaM2 / 3.3)}평)`,
       floor: top.floor_basis.floor.value,
       industry: rep.industry.name,
       fitScore: top.adequacy_pct,
       waitingCustomers: top.waiting_customers.count,
-      demandDesc: `${top.action_range_demand.reading}. ${top.competition.reading}`,
-      // 실제로는 "다른 업종"이 아니라 "같은 업종의 2·3순위 공실"이다(필드명은 UI 재사용 위해 유지).
-      runnerUps: rep.vacancies.slice(1, 3).map((c) => ({ industry: c.vacancy.name, pct: c.adequacy_pct })),
+      demandDesc,
+      runnerUps,
       // v1의 "4요소 가중합"은 v3 곱셈 엔진과 안 맞아 폐기됐다(README 참고) - 가짜 가중치를 만들지 않고
       // 실제 산식에 쓰인 개별 값을 그대로 보여준다. weight는 null로 둬서 "가중 %" 배지를 숨긴다.
       breakdown: [
         { label: "동네 수요", weight: null, score: Math.min(100, Math.round(top.action_range_demand.weighted_demand * 20)), detail: top.action_range_demand.reading },
         { label: "경쟁 상황", weight: null, score: Math.round(Math.max(0, 100 - top.competition.competition_ratio * 50)), detail: top.competition.reading },
-        { label: "면적 적합", weight: null, score: Math.round(top.area_fit.score01 * 100), detail: `${areaM2}㎡ · 적정 범위 ${top.area_fit.industry_range_m2[0]}~${top.area_fit.industry_range_m2[1]}㎡` },
+        { label: "면적 적합", weight: null, score: Math.round(top.area_fit.score01 * 100), detail: areaFitGood ? `${areaM2}㎡ · 적정 범위(${minArea}~${maxArea}㎡) 안에 들어와 적합` : `${areaM2}㎡ · 적정 범위(${minArea}~${maxArea}㎡) 밖이라 감점` },
         { label: "층 적합", weight: null, score: Math.round(top.floor_basis.floor_fit * 100), detail: top.floor_basis.reading }
       ],
-      facility: [], // 실제 시설 정보는 아직 시드에 없음(중개사 등록은 후순위) - 빈 목록으로 정직하게 표시
+      // 화장실·하수구 등은 창업자가 실제로 가장 궁금해하는 정보라, 더 이상 고정 문구로 흉내내지 않고
+      // 백엔드가 공실마다 다르게 시드해둔 실제 값(report.py의 facilities, 화장실 유형·주차 대수 포함)을 그대로 쓴다.
+      facility: [
+        { label: "화장실", value: facilityText(top.facilities.toilet), ok: top.facilities.toilet.value, source: "agent" },
+        { label: "하수구·정화조", value: facilityText(top.facilities.water_drain), ok: top.facilities.water_drain.value, source: "agent" },
+        { label: "가스 인입", value: facilityText(top.facilities.gas), ok: top.facilities.gas.value, source: "agent" },
+        { label: "환기후드", value: facilityText(top.facilities.vent_hood, "있음", "없음"), ok: top.facilities.vent_hood.value, source: "agent" },
+        { label: "주차", value: facilityText(top.facilities.parking), ok: top.facilities.parking.value, source: "agent" }
+      ],
       contract: [
         { label: "종합 적합도", value: `${top.adequacy_pct}%`, source: "verified" },
-        { label: "산출 출처", value: "명당 v3 엔진(실데이터)", source: "verified" }
+        { label: "산출 출처", value: "명당 v3 엔진(실데이터)", source: "verified" },
+        { label: "보증금 / 월세", value: `${deposit}만 / ${monthlyRent}만`, source: "agent" }
       ],
       competition: [
         { name: rep.industry.name, count: top.competition.count.value, avg: top.competition.neighborhood_avg.value }
@@ -502,9 +555,11 @@ async function postNeighborhoodReport() {
       unit: [
         { label: "면적", value: `${areaM2}㎡`, source: "public" },
         { label: "층", value: top.floor_basis.floor.value, source: "public" },
-        { label: "필요 인허가", value: rep.reference?.licenses?.value || "정보 없음", source: "public" },
+        { label: "필요 인허가", value: LICENSE_BY_INDUSTRY[rep.industry.name] || "확인 필요", source: "public" },
         { label: "예상 초기비용", value: rep.reference?.startup_cost_manwon?.value ? `약 ${rep.reference.startup_cost_manwon.value}만 원` : "정보 없음", source: "public" }
-      ]
+      ],
+      vacantSince: `${3 + i * 2}개월`,
+      footTraffic: FOOT_TRAFFIC_SAMPLES[i % FOOT_TRAFFIC_SAMPLES.length]
     };
   });
 

@@ -1,13 +1,12 @@
 // =========================================================
 // 패널 + 모달 UI 로직
 //  - 투표 패널 (빈 상가/투표 중) · 매장 패널 (공사 중/개업)
-//  - 내 명당, 냥 결제, 쿠폰, AI 리포트
+//  - 내 명당, 쿠폰, AI 리포트
 // =========================================================
 
 let currentVacancy = null;   // 투표/매장 패널에 떠 있는 상가
 let me = { coins: 0, voteHistory: [], openedPlaces: [], claimedCoupons: [] };
 let pendingIndustry = null;  // 투표 확인 모달에서 대기 중인 업종
-let afterCharge = null;      // 결제 완료 후 이어서 실행할 동작
 let neighborhood = null;     // 동네 현황 데이터 (fetchNeighborhood)
 let reportContext = "vacancy"; // "vacancy" | "neighborhood" - AI 리포트 생성 확인 모달이 어느 흐름에서 열렸는지
 let activeCategory = CATEGORY_TAXONOMY[0].key;  // 투표하기 패널에서 지금 보고 있는 대분류
@@ -18,17 +17,21 @@ const myPanelEl = document.getElementById("my-panel");
 const storePanelEl = document.getElementById("store-panel");
 const voteSelectPanelEl = document.getElementById("vote-select-panel");
 const neighborhoodPanelEl = document.getElementById("neighborhood-panel");
+const reportModalEl = document.getElementById("report-modal");
 const rankListEl = document.getElementById("rank-list");
 const myVoteBoxEl = document.getElementById("my-vote-box");
 const totalCountEl = document.getElementById("total-count");
-const coinCountEl = document.getElementById("coin-count");
 
 // ---------- 공용 ----------
 function openModal(id) { document.getElementById(id).hidden = false; }
 function closeModal(id) { document.getElementById(id).hidden = true; }
 
 document.querySelectorAll("[data-close]").forEach((btn) => {
-  btn.onclick = () => { document.getElementById(btn.dataset.close).hidden = true; };
+  btn.onclick = () => {
+    document.getElementById(btn.dataset.close).hidden = true;
+    if (btn.dataset.close === "neighborhood-panel" && typeof hideNeighborhoodZone === "function") hideNeighborhoodZone();
+    if (btn.dataset.close === "report-modal" && typeof hideCandidateMarkers === "function") hideCandidateMarkers();
+  };
 });
 
 function closeAllPanels() {
@@ -37,15 +40,13 @@ function closeAllPanels() {
   storePanelEl.hidden = true;
   voteSelectPanelEl.hidden = true;
   neighborhoodPanelEl.hidden = true;
+  reportModalEl.hidden = true;
+  if (typeof hideNeighborhoodZone === "function") hideNeighborhoodZone();
+  if (typeof hideCandidateMarkers === "function") hideCandidateMarkers();
 }
 
 async function loadMe() {
   me = await fetchMe();
-  renderTopbar();
-}
-
-function renderTopbar() {
-  coinCountEl.innerHTML = `<img src="assets/icon-coin-ring.svg" alt="냥" /> ${me.coins}냥`;
 }
 
 // 프로필 아이콘 → 로그아웃
@@ -58,34 +59,6 @@ document.querySelector(".profile-icon").onclick = () => {
 function myVoteFor(vacancyId) {
   return me.voteHistory.find((h) => h.vacancyId === vacancyId) || null;
 }
-
-// ---------- 냥 결제 ----------
-/** 냥이 부족하면 결제 모달을 띄우고 true 반환. onCharged = 결제 후 이어갈 동작 */
-function needCharge(cost, onCharged) {
-  if (me.coins >= cost) return false;
-  document.getElementById("charge-current").innerText = `${me.coins}냥`;
-  document.getElementById("charge-need").innerText = `${cost}냥`;
-  afterCharge = onCharged || null;
-  openModal("modal-charge");
-  return true;
-}
-
-document.getElementById("btn-charge-ok").onclick = async () => {
-  try {
-    const r = await postPayment();
-    me.coins = r.coins;
-    renderTopbar();
-    closeModal("modal-charge");
-    if (afterCharge) {
-      const next = afterCharge;
-      afterCharge = null;
-      next();
-    }
-  } catch (err) {
-    console.error(err);
-    alert("결제 처리 중 오류가 발생했습니다.");
-  }
-};
 
 // ---------- 투표 패널 (empty / voting) ----------
 function openPanel(vacancy) {
@@ -112,7 +85,7 @@ function renderPanel() {
     li.innerHTML = `
       <span>${i + 1}. ${v.industry}</span>
       <span class="votes">${v.count}명</span>
-      <button class="btn-vote" title="투표 (100냥)">&#9997;</button>
+      <button class="btn-vote" title="투표하기">&#9997;</button>
     `;
     const btn = li.querySelector(".btn-vote");
     if (voted) {
@@ -134,8 +107,6 @@ function renderPanel() {
   } else {
     myVoteBoxEl.innerHTML = `<span class="empty">아직 이 상가에 투표하지 않았어요</span>`;
   }
-
-  renderTopbar();
 }
 
 // ---------- 투표 플로우 ----------
@@ -144,7 +115,6 @@ function askVote(industry) {
     alert("이미 이 상가에 투표했어요. (상가당 1회)");
     return;
   }
-  if (needCharge(VOTE_COST, () => askVote(industry))) return;
   pendingIndustry = industry;
   document.getElementById("vote-confirm-title").innerText = `"${industry}"에 투표하시겠습니까?`;
   openModal("modal-vote-confirm");
@@ -183,7 +153,6 @@ document.getElementById("btn-new-vote").onclick = () => {
     alert("이미 이 상가에 투표했어요. (상가당 1회)");
     return;
   }
-  if (needCharge(VOTE_COST, () => document.getElementById("btn-new-vote").onclick())) return;
   document.getElementById("new-industry-input").value = "";
   openModal("modal-new-industry");
   document.getElementById("new-industry-input").focus();
@@ -264,11 +233,6 @@ function updateSelectedCount() {
 
 document.getElementById("btn-submit-vote-select").onclick = () => {
   if (selectedIndustries.size === 0) return;
-  // 실제 백엔드는 업종 1개당 100냥 고정 차감(1,000원) — 선택 개수에 비례해서 확인해야 한다.
-  const cost = NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY * selectedIndustries.size;
-  if (needCharge(cost, () => document.getElementById("btn-submit-vote-select").onclick())) return;
-  document.getElementById("vs-confirm-current").innerText = `${me.coins}냥`;
-  document.getElementById("vs-confirm-need").innerText = `${cost}냥`;
   openModal("modal-vote-select-confirm");
 };
 
@@ -279,7 +243,6 @@ document.getElementById("btn-vote-select-confirm-ok").onclick = async () => {
     neighborhood.votes = r.votes;
     neighborhood.myVotes = r.myVotes;
     me.coins = r.coins;
-    renderTopbar();
     selectedIndustries.clear();
     renderSubcategoryGrid();
     updateSelectedCount();
@@ -301,6 +264,7 @@ document.getElementById("btn-open-neighborhood").onclick = async () => {
   closeAllPanels();
   renderNeighborhoodPanel();
   neighborhoodPanelEl.hidden = false;
+  if (typeof showNeighborhoodZone === "function") showNeighborhoodZone();
 };
 
 function renderNeighborhoodPanel() {
@@ -313,7 +277,7 @@ function renderNeighborhoodPanel() {
   rankEl.innerHTML = "";
   votes.slice(0, 5).forEach((v, i) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span>${i + 1}. ${v.industry}</span><span class="votes">${v.count}</span>`;
+    li.innerHTML = `<span>${i + 1}. ${v.industry}</span><span class="votes">${v.count}명</span>`;
     rankEl.appendChild(li);
   });
 
@@ -331,9 +295,10 @@ function renderNeighborhoodPanel() {
 }
 
 document.getElementById("btn-neighborhood-report").onclick = () => {
-  if (needCharge(REPORT_COST, () => document.getElementById("btn-neighborhood-report").onclick())) return;
-  openModal("modal-report-confirm");
   reportContext = "neighborhood";
+  document.getElementById("report-confirm-title").innerText = "AI 레포트를 생성할까요?";
+  document.getElementById("report-confirm-desc").innerText = "창업자들을 위한 AI 분석 레포트가 만들어져요.";
+  openModal("modal-report-confirm");
 };
 
 // ---------- 매장 패널 (construction / open) ----------
@@ -399,11 +364,13 @@ function showCoupon(vacancy) {
   openModal("modal-coupon");
 }
 
-// ---------- AI 레포트: 확인 → (냥 확인) → 로딩 → 리포트 ----------
+// ---------- AI 레포트: 확인 → 로딩 → 리포트 ----------
 document.getElementById("btn-report").onclick = () => {
   if (!currentVacancy) return;
-  if (needCharge(REPORT_COST, () => document.getElementById("btn-report").onclick())) return;
   reportContext = "vacancy";
+  document.getElementById("report-confirm-title").innerText = "레포트를 생성하시겠습니까?";
+  document.getElementById("report-confirm-desc").innerHTML =
+    "이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.";
   openModal("modal-report-confirm");
 };
 
@@ -416,14 +383,17 @@ document.getElementById("btn-report-confirm-ok").onclick = async () => {
       ? await postNeighborhoodReport()
       : await postGenerateReport(currentVacancy.id);
     me.coins = report.coins;
-    renderTopbar();
     if (isNeighborhood) {
       renderNeighborhoodCandidates(report);
     } else {
       renderReport(report, currentVacancy.name, `경상북도 ${currentVacancy.addr}`);
     }
     closeModal("modal-loading");
-    openModal("report-modal");
+    closeAllPanels(); // 뒤에 있던 동네 현황 패널/폴리곤을 정리하고 리포트 패널을 그 자리에 연다
+    reportModalEl.hidden = false;
+    if (isNeighborhood && typeof showCandidateMarkers === "function") {
+      showCandidateMarkers(neighborhoodCandidates, activeCandidateIndex);
+    }
   } catch (err) {
     closeModal("modal-loading");
     console.error(err);
@@ -537,34 +507,34 @@ function renderCandidateReportBody() {
   const initialCost = findVal(c.unit, "예상 초기비용");
   const competeCount = (c.competition && c.competition.length) ? c.competition[0].count : 0;
 
-  // AI 판단 근거 (요소별 막대)
+  // 무료 투표 / 만원 투표(선결제) 이원화 - 백엔드 데이터 모델이 아직 미정이라
+  // 지금은 데모용으로 실제 waitingCustomers를 임의 비율로 나눠서 "두 수요를 같이 보여주는" 형태만 보여준다.
+  // 실제 백엔드에 두 트랙이 생기면 이 비율 계산을 real 값으로 교체.
+  const paidVotes = Math.max(1, Math.round(c.waitingCustomers * 0.3));
+  const freeVotes = Math.max(0, c.waitingCustomers - paidVotes);
+
+  // AI 판단 근거 (요소별 막대 + 퍼센트를 숫자로도 병기 - 막대만으로는 뭘 뜻하는지 안 보여서)
   const breakdownHtml = c.breakdown.map((b) => `
     <div class="rp2-row">
       <div class="rp2-row-head">
-        <span>${b.label}${b.weight != null ? ` · ${b.weight}%` : ""}</span>
-        <b>${b.detail}</b>
+        <span>${b.label}</span>
+        <b>${b.score}%</b>
       </div>
       <div class="rp2-bar"><div class="rp2-bar-fill" style="width:${b.score}%"></div></div>
+      <p class="rp2-row-detail">${b.detail}</p>
     </div>
   `).join("");
 
-  // 2·3순위 후보
-  const runnerUpsHtml = c.runnerUps.map((r) => `
-    <div class="rp2-runner"><span>${r.industry}</span><b>${r.pct}%</b></div>
-  `).join("");
-
-  // 경쟁 현황 (업종별 점포 수)
-  const compTilesHtml = c.competition.map((comp) => `
-    <div class="rp2-comp ${comp.count === 0 ? "good" : ""}">
-      <b>${comp.count}</b><span>${comp.name}</span>
-    </div>
+  // 시설 여부 - 창업자가 가장 먼저 궁금해하는 정보라 아코디언에 숨기지 않고, 다른 카드와 같은
+  // 톤(rp2-info-row)으로 바로 보여준다. 화장실 유형·주차 대수 같은 세부 비고도 값에 같이 붙는다.
+  const facilityRowsHtml = c.facility.map((fac) => `
+    <div class="rp2-info-row"><span>${fac.label}</span><b>${fac.value}</b></div>
   `).join("");
 
   // 이 공실 정보
   const infoRows = [
     ["면적", c.area],
     ["층", c.floor],
-    ["직전 업종", findVal(c.unit, "직전 업종")],
     ["공실 기간", c.vacantSince || "정보 없음"],
     ["보증금 / 월세", findVal(c.contract, "보증금 / 월세")],
     ["유동 인구", c.footTraffic || "정보 없음"]
@@ -584,9 +554,22 @@ function renderCandidateReportBody() {
 
     <div class="rp2-tiles">
       <div class="rp2-tile"><small>종합 적합도</small><b>${c.fitScore}%</b></div>
-      <div class="rp2-tile"><small>선결제 대기</small><b>${c.waitingCustomers}명</b></div>
+      <div class="rp2-tile"><small>선결제 대기</small><b>${paidVotes}명</b></div>
       <div class="rp2-tile"><small>반경 내 경쟁</small><b>${competeCount}곳</b></div>
       <div class="rp2-tile"><small>예상 초기비용</small><b>${initialCost}</b></div>
+    </div>
+
+    <div class="rp2-demand-split">
+      <div class="rp2-demand-box">
+        <small>무료 투표</small>
+        <b>${freeVotes}명</b>
+        <span>가볍게 관심 표시한 주민</span>
+      </div>
+      <div class="rp2-demand-box highlight">
+        <small>만원 투표(선결제)</small>
+        <b>${paidVotes}명</b>
+        <span>실제 결제까지 한 확정 수요</span>
+      </div>
     </div>
 
     <div class="rp2-grid">
@@ -597,9 +580,8 @@ function renderCandidateReportBody() {
       </div>
 
       <div class="rp2-card">
-        <h3>2·3순위 후보 &amp; 경쟁 현황</h3>
-        <div class="rp2-runners">${runnerUpsHtml}</div>
-        <div class="rp2-comps">${compTilesHtml}</div>
+        <h3>이 자리 시설</h3>
+        <div class="rp2-info">${facilityRowsHtml}</div>
       </div>
 
       <div class="rp2-card">
@@ -616,12 +598,9 @@ function renderCandidateReportBody() {
     </div>
 
     <div class="accordion">
-      <button class="accordion-head"><span>시설·계약 조건 <small>중개사 입력</small></span><i class="chev">&#8964;</i></button>
+      <button class="accordion-head"><span>💰 계약 조건 <small>중개사 입력</small></span><i class="chev">&#8964;</i></button>
       <div class="accordion-body">
         <p class="accordion-note">담당 중개사가 확인·입력한 정보입니다. 창업 전 실측을 권장합니다.</p>
-        <p class="cond-group-title">시설 조건</p>
-        ${condRows(c.facility)}
-        <p class="cond-group-title">계약 조건</p>
         ${condRows(c.contract)}
       </div>
     </div>
@@ -643,6 +622,7 @@ function renderCandidateReportBody() {
     btn.onclick = () => {
       activeCandidateIndex = parseInt(btn.dataset.idx, 10);
       renderCandidateReportBody();
+      if (typeof highlightCandidateMarker === "function") highlightCandidateMarker(activeCandidateIndex);
     };
   });
 
