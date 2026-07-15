@@ -7,7 +7,10 @@ let map;
 /** 카카오맵 SDK를 동적으로 로드하고, 로드가 끝나면 callback 실행 */
 function loadKakaoSDK(appKey, callback) {
   const script = document.createElement("script");
-  script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=services`;
+  // 프로토콜 상대경로("//...")로 두면 http로 뜬 페이지(예: http://127.0.0.1:5500)에선 이 스크립트도
+  // http로 요청되는데, 최신 브라우저가 이를 ORB(Opaque Response Blocking)로 차단한다
+  // (net::ERR_BLOCKED_BY_ORB - 키·도메인 등록과 무관한 원인). https를 강제해서 회피.
+  script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=services`;
   script.onload = () => kakao.maps.load(callback);
   script.onerror = () => {
     alert("카카오맵 SDK 로드 실패. config.js의 KAKAO_APP_KEY와 도메인 등록을 확인하세요.");
