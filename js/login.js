@@ -36,8 +36,7 @@ btnSend.onclick = () => {
   btnVerify.hidden = false;
   btnSend.innerText = "재전송";
   showError("code-error", "");
-  document.getElementById("code-hint").innerText =
-    "인증번호를 발송했어요. (데모: 숫자 6자리 아무거나 입력)";
+  document.getElementById("code-hint").innerText = "인증번호를 발송했어요.";
   codeInput.focus();
 };
 
