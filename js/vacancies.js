@@ -54,6 +54,13 @@ const MOCK_VACANCIES = [
     area: "25㎡ / 1층",
     status: "open",
     openedName: "달콤 디저트 카페",     // 창업 완료된 매장 이름
+    // ↓ 창업 매장 광고용 필드 (백엔드 /map placements 계약과 동일한 이름).
+    //   photo = 파일명만 저장, 프론트가 assets/shops/{photo} 로 참조(팀이 실사진 업로드).
+    industry: "디저트 카페",
+    photo: "dalkom-dessert-cafe.jpg",
+    hours: "매일 10:00 - 21:00",
+    address: "경상북도 포항시 북구 양덕로",
+    intro: "지난달까지 공사 중이던 자리에 새로 문을 연 디저트 카페입니다. 명당을 통해 선결제해 주신 여러분 감사합니다. 첫 손님을 기다리고 있어요!",
     votes: [
       { industry: "디저트 카페", count: 62 }
     ]
@@ -63,20 +70,41 @@ const MOCK_VACANCIES = [
 // ===== 동네 전체 업종 투표 (헤더 "투표하기" / "동네 현황") =====
 // 대분류 → 소분류 트리. iconOff = 선택 전(흰 배경), iconOn = 선택 후(빨간 배경) 디자이너 아이콘
 const CATEGORY_TAXONOMY = [
-  { key: "음식점", iconOff: "assets/cat-food-off.svg", iconOn: "assets/cat-food-on.svg", subcategories: ["햄버거", "한식", "분식", "중식"] },
-  { key: "카페", iconOff: "assets/cat-cafe-off.svg", iconOn: "assets/cat-cafe-on.svg", subcategories: ["디저트 카페", "베이커리", "프랜차이즈 카페", "개인 카페"] },
-  { key: "여가시설", iconOff: "assets/cat-leisure-off.svg", iconOn: "assets/cat-leisure-on.svg", subcategories: ["헬스장", "필라테스", "스크린골프", "PC방"] },
-  { key: "소매", iconOff: "assets/cat-retail-off.svg", iconOn: "assets/cat-retail-on.svg", subcategories: ["편의점", "옷가게", "문구점", "잡화점"] },
-  { key: "생활서비스", iconOff: "assets/cat-life-off.svg", iconOn: "assets/cat-life-on.svg", subcategories: ["세탁소", "부동산", "미용실", "인쇄소"] },
-  { key: "의료", iconOff: "assets/cat-medical-off.svg", iconOn: "assets/cat-medical-on.svg", subcategories: ["약국", "한의원", "치과", "동물병원"] }
+  { key: "음식점", iconOff: "assets/cat-food-off.svg", iconOn: "assets/cat-food-on.svg", subcategories: ["햄버거", "치킨", "피자", "한식", "분식", "중식", "고기·구이", "양식"] },
+  { key: "카페", iconOff: "assets/cat-cafe-off.svg", iconOn: "assets/cat-cafe-on.svg", subcategories: ["디저트 카페", "베이커리", "프랜차이즈 카페", "개인 카페", "브런치 카페", "애견 카페", "테이크아웃 전문", "차·티 전문점"] },
+  { key: "여가시설", iconOff: "assets/cat-leisure-off.svg", iconOn: "assets/cat-leisure-on.svg", subcategories: ["헬스장", "필라테스", "스크린골프", "PC방", "당구장", "볼링장", "만화카페", "방탈출카페"] },
+  { key: "소매", iconOff: "assets/cat-retail-off.svg", iconOn: "assets/cat-retail-on.svg", subcategories: ["편의점", "옷가게", "문구점", "잡화점", "꽃집", "화장품가게", "신발가게", "안경점"] },
+  { key: "생활서비스", iconOff: "assets/cat-life-off.svg", iconOn: "assets/cat-life-on.svg", subcategories: ["세탁소", "부동산", "미용실", "인쇄소", "네일샵", "사진관", "휴대폰매장", "열쇠·수선"] },
+  { key: "의료", iconOff: "assets/cat-medical-off.svg", iconOn: "assets/cat-medical-on.svg", subcategories: ["약국", "한의원", "치과", "동물병원", "피부과", "정형외과", "안과", "산부인과"] }
 ];
 
-// 세부 업종 아이콘 - 지금은 음식점 4종만 에셋 있음, 나머지는 아이콘 없이 텍스트만 표시
+// 세부 업종 아이콘 - 음식점·카페·여가시설은 에셋 있음. 소매·생활서비스·의료는 대분류 탭 아이콘만 있고
+// 세부업종 카드는 아이콘 없이 텍스트만 표시(renderSubcategoryGrid가 이 맵에 없으면 알아서 생략함).
 const SUBCATEGORY_ICONS = {
   "햄버거": "assets/sub-hamburger.svg",
+  "치킨": "assets/sub-chicken.svg",
+  "피자": "assets/sub-pizza.svg",
   "분식": "assets/sub-bunsik.svg",
   "한식": "assets/sub-hansik.svg",
-  "중식": "assets/sub-jungsik.svg"
+  "중식": "assets/sub-jungsik.svg",
+  "고기·구이": "assets/sub-meat.svg",
+  "양식": "assets/sub-western.svg",
+  "디저트 카페": "assets/sub-dessert-cafe.svg",
+  "베이커리": "assets/sub-bakery.svg",
+  "프랜차이즈 카페": "assets/sub-franchise-cafe.svg",
+  "개인 카페": "assets/sub-personal-cafe.svg",
+  "브런치 카페": "assets/sub-brunch-cafe.svg",
+  "애견 카페": "assets/sub-dog-cafe.svg",
+  "테이크아웃 전문": "assets/sub-takeout-cafe.svg",
+  "차·티 전문점": "assets/sub-tea-cafe.svg",
+  "헬스장": "assets/sub-gym.svg",
+  "필라테스": "assets/sub-pilates.svg",
+  "스크린골프": "assets/sub-screengolf.svg",
+  "PC방": "assets/sub-pcroom.svg",
+  "당구장": "assets/sub-billiard.svg",
+  "볼링장": "assets/sub-bowling.svg",
+  "만화카페": "assets/sub-comicscafe.svg",
+  "방탈출카페": "assets/sub-escaperoom.svg"
 };
 
 // 동네 전체 업종별 누적 투표수 (동네 현황 패널의 "투표 순위" 근거) - 백엔드 GET /neighborhood 응답으로 교체
@@ -100,7 +128,7 @@ const MOCK_NEIGHBORHOOD = {
 // =========================================================
 
 let _industriesCache = null;
-/** GET /industries - 실제 업종 목록(6종). 대분류 없이 평평한 목록이라 캐시해서 재사용. */
+/** GET /industries - 실제 업종 목록(6대분류 × 8세부 = 48종, id+name+category). 캐시해서 재사용. */
 async function getIndustries() {
   if (_industriesCache) return _industriesCache;
   const res = await fetch(`${BACKEND_BASE_URL}/industries`);
@@ -128,19 +156,6 @@ function friendlyRegionName(regionCode) {
   return REGION_DISPLAY_NAMES[regionCode] || regionCode;
 }
 
-/** CATEGORY_TAXONOMY(투표하기 패널의 대분류/세부업종 UI)를 실제 백엔드 업종으로 채운다.
- *  백엔드엔 대분류 개념이 없어 카테고리 탭 1개("업종")에 6종을 전부 담는다.
- *  const 배열이라 재할당 대신 내용만 비우고 다시 채운다(panel.js가 이 배열 참조를 그대로 씀). */
-function rebuildCategoryTaxonomyFromIndustries(industries) {
-  CATEGORY_TAXONOMY.length = 0;
-  CATEGORY_TAXONOMY.push({
-    key: "업종",
-    iconOff: "assets/cat-food-off.svg", // 백엔드에 대분류가 없어 기존 에셋을 임시로 재사용
-    iconOn: "assets/cat-food-on.svg",
-    subcategories: industries.map((i) => i.name)
-  });
-}
-
 function industryIdByName(industries, name) {
   const found = industries.find((i) => i.name === name);
   if (!found) throw new Error(`알 수 없는 업종: ${name}`);
@@ -164,9 +179,7 @@ function saveMyNeighborhoodVotes(regionCode, industries) {
 }
 
 // 내 정보 - 백엔드 GET /me 응답으로 교체될 값
-// coins 기본값 50냥 → 투표(100냥)하려면 결제 필요 = 결제 플로우 시연 가능
 const MOCK_ME = {
-  coins: DEFAULT_COINS,
   // 내가 투표한 이력 (상가당 1건)
   voteHistory: [
     { vacancyId: 4, industry: "디저트 카페", addr: "포항시 북구 중앙동 5-2" },
@@ -188,7 +201,7 @@ async function fetchVacancies() {
   return res.json();
 }
 
-/** GET /me - 냥 잔액/투표 이력/쿠폰 */
+/** GET /me - 투표 이력/쿠폰 */
 async function fetchMe() {
   if (USE_MOCK_DATA) return MOCK_ME;
   const res = await fetch(`${API_BASE_URL}/me`);
@@ -196,23 +209,8 @@ async function fetchMe() {
   return res.json();
 }
 
-/** POST /payments - 1,000원 결제 → 100냥 충전 (응답: 갱신된 잔액) */
-async function postPayment() {
-  if (USE_MOCK_DATA) {
-    MOCK_ME.coins += COINS_PER_PAYMENT;
-    return { coins: MOCK_ME.coins };
-  }
-  const res = await fetch(`${API_BASE_URL}/payments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amountKrw: PAYMENT_KRW })
-  });
-  if (!res.ok) throw new Error("결제 실패: " + res.status);
-  return res.json();
-}
-
-/** POST /vacancies/:id/votes  body:{industry} - 투표, 100냥 차감
- *  응답: { votes: 갱신된 배열, coins: 차감 후 잔액 } */
+/** POST /vacancies/:id/votes  body:{industry} - 투표
+ *  응답: { votes: 갱신된 배열 } */
 async function postVote(vacancyId, industry) {
   if (USE_MOCK_DATA) {
     const v = MOCK_VACANCIES.find((x) => x.id === vacancyId);
@@ -223,8 +221,7 @@ async function postVote(vacancyId, industry) {
     }
     entry.count += 1;
     if (v.status === "empty") v.status = "voting";
-    MOCK_ME.coins -= VOTE_COST;
-    return { votes: v.votes, coins: MOCK_ME.coins };
+    return { votes: v.votes };
   }
   const res = await fetch(`${API_BASE_URL}/vacancies/${vacancyId}/votes`, {
     method: "POST",
@@ -249,7 +246,7 @@ async function postClaimCoupon(vacancyId) {
   return res.json();
 }
 
-/** POST /vacancies/:id/report - AI 창업 기회 리포트 생성, 50냥 차감
+/** POST /vacancies/:id/report - AI 창업 기회 리포트 생성
  *  (LLM 호출이라 수 초 걸림 - 프론트는 로딩 모달 표시 중) */
 async function postGenerateReport(vacancyId) {
   if (USE_MOCK_DATA) {
@@ -258,9 +255,7 @@ async function postGenerateReport(vacancyId) {
     const votes = [...v.votes].sort((a, b) => b.count - a.count);
     const top = votes[0] || { industry: "미정", count: 0 };
     const total = votes.reduce((s, x) => s + x.count, 0);
-    MOCK_ME.coins -= REPORT_COST;
     return {
-      coins: MOCK_ME.coins,
       recommendedIndustry: top.industry,
       fitScore: 82,
       waitingCustomers: top.count,
@@ -295,12 +290,11 @@ async function postGenerateReport(vacancyId) {
   return res.json();
 }
 
-/** GET /neighborhood 대응 - 실제로는 GET /industries + GET /regions/{code}/demand 조합.
- *  업종 택소노미(CATEGORY_TAXONOMY)도 여기서 실제 업종으로 채워둔다(투표하기 패널이 열리기 전에 필요). */
+/** GET /neighborhood 대응 - 실제로는 GET /regions/{code}/demand.
+ *  CATEGORY_TAXONOMY(대분류/세부업종/아이콘)는 프론트에 고정 정의돼 있고, 백엔드 시드 업종명이
+ *  이와 정확히 일치하도록 맞춰뒀다(동네주문-백엔드/db.py SEED_INDUSTRIES) - 여기선 투표수만 받아온다. */
 async function fetchNeighborhood() {
   if (NEIGHBORHOOD_USE_MOCK) return MOCK_NEIGHBORHOOD;
-  const industries = await getIndustries();
-  rebuildCategoryTaxonomyFromIndustries(industries);
   const regionCode = await getPrimaryRegionCode();
   const res = await fetch(`${BACKEND_BASE_URL}/regions/${encodeURIComponent(regionCode)}/demand`);
   if (!res.ok) throw new Error("동네 현황 로드 실패: " + res.status);
@@ -313,8 +307,7 @@ async function fetchNeighborhood() {
 }
 
 /** POST /neighborhood/votes 대응 - 실제로는 POST /votes/batch(region_code+industry_ids).
- *  백엔드는 업종 1개당 1,000원(=100냥) 고정 차감이라 총액은 industries.length에 비례한다.
- *  냥 잔액 표시는 백엔드에 실제 유저 지갑(로그인 후순위)이 없어 목업 잔액에서만 차감한다. */
+ *  "투표하기" 패널의 무료 투표는 비용이 없다(냥 시스템 제거 - 유료 트랙은 10,000원 투표만 별도). */
 async function postNeighborhoodVoteBatch(industries) {
   if (NEIGHBORHOOD_USE_MOCK) {
     industries.forEach((industry) => {
@@ -328,8 +321,7 @@ async function postNeighborhoodVoteBatch(industries) {
         MOCK_NEIGHBORHOOD.myVotes.push(industry);
       }
     });
-    MOCK_ME.coins -= VOTE_COST;
-    return { votes: MOCK_NEIGHBORHOOD.votes, coins: MOCK_ME.coins, myVotes: MOCK_NEIGHBORHOOD.myVotes };
+    return { votes: MOCK_NEIGHBORHOOD.votes, myVotes: MOCK_NEIGHBORHOOD.myVotes };
   }
 
   const allIndustries = await getIndustries();
@@ -360,18 +352,64 @@ async function postNeighborhoodVoteBatch(industries) {
   const demand = await demandRes.json();
   const votes = demand.ranking.map((r) => ({ industry: r.industry_name, count: r.vote_count }));
 
-  MOCK_ME.coins -= NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY * industries.length;
-  return { votes, coins: MOCK_ME.coins, myVotes: mergedMine };
+  return { votes, myVotes: mergedMine };
 }
 
-/** POST /neighborhood/report - 동네 전체 투표 데이터 기반 AI 창업 기회 리포트, 50냥 차감
+/** POST /neighborhood/votes/paid 대응(실제 결제 10,000원) - 실제로는 POST /votes/batch와 동일 엔드포인트지만
+ *  paid:true로 표시해 창업 확정 시 12,000원 업종 이용권으로 교환되는 별도 트랙임을 백엔드에 남긴다. */
+async function postPaidVote(industry) {
+  if (NEIGHBORHOOD_USE_MOCK) {
+    let entry = MOCK_NEIGHBORHOOD.votes.find((x) => x.industry === industry);
+    if (!entry) {
+      entry = { industry, count: 0 };
+      MOCK_NEIGHBORHOOD.votes.push(entry);
+    }
+    entry.count += 1;
+    if (!MOCK_NEIGHBORHOOD.myVotes.includes(industry)) {
+      MOCK_NEIGHBORHOOD.myVotes.push(industry);
+    }
+    return { votes: MOCK_NEIGHBORHOOD.votes, myVotes: MOCK_NEIGHBORHOOD.myVotes };
+  }
+
+  const allIndustries = await getIndustries();
+  const regionCode = await getPrimaryRegionCode();
+  const industryIds = [industryIdByName(allIndustries, industry)];
+  const user = currentUser();
+
+  const res = await fetch(`${BACKEND_BASE_URL}/votes/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      region_code: regionCode,
+      industry_ids: industryIds,
+      voter_id: user?.id || "anon",
+      voter_name: user?.nickname || user?.id || "익명",
+      lat: NEIGHBORHOOD_VOTE_LOCATION.lat,
+      lng: NEIGHBORHOOD_VOTE_LOCATION.lng,
+      paid: true
+    })
+  });
+  if (!res.ok) throw new Error("투표 실패: " + res.status);
+  await res.json();
+
+  const prevMine = loadMyNeighborhoodVotes(regionCode);
+  const mergedMine = Array.from(new Set([...prevMine, industry]));
+  saveMyNeighborhoodVotes(regionCode, mergedMine);
+
+  const demandRes = await fetch(`${BACKEND_BASE_URL}/regions/${encodeURIComponent(regionCode)}/demand`);
+  const demand = await demandRes.json();
+  const votes = demand.ranking.map((r) => ({ industry: r.industry_name, count: r.vote_count }));
+
+  return { votes, myVotes: mergedMine };
+}
+
+/** POST /neighborhood/report - 동네 전체 투표 데이터 기반 AI 창업 기회 리포트
  *  응답: { coins, neighborhoodName, candidates: [ {A/B/C공실 각각의 상세 정보} ] }
  *  candidates 각 필드의 source 값은 데이터 출처 표기용: "verified"(명당 검증) / "public"(공공 API) / "agent"(중개사 입력) */
 async function postNeighborhoodReport() {
   if (NEIGHBORHOOD_USE_MOCK) {
     await new Promise((r) => setTimeout(r, 2000)); // LLM 흉내
     const sorted = [...MOCK_NEIGHBORHOOD.votes].sort((a, b) => b.count - a.count);
-    MOCK_ME.coins -= REPORT_COST;
 
     const FIT_SCORES = [82, 74, 69];
     const ADDR_SAMPLES = [
@@ -442,7 +480,7 @@ async function postNeighborhoodReport() {
       };
     });
 
-    return { coins: MOCK_ME.coins, neighborhoodName: MOCK_NEIGHBORHOOD.name, candidates };
+    return { neighborhoodName: MOCK_NEIGHBORHOOD.name, candidates };
   }
   const regionCode = await getPrimaryRegionCode();
   const demandRes = await fetch(`${BACKEND_BASE_URL}/regions/${encodeURIComponent(regionCode)}/demand`);
@@ -468,8 +506,6 @@ async function postNeighborhoodReport() {
   }
   if (reports.length === 0) throw new Error("추천할 공실이 없어요.");
 
-  MOCK_ME.coins -= REPORT_COST; // 위 postNeighborhoodVoteBatch와 동일한 이유로 목업 잔액에서만 차감
-
   // "공실 기간"/"보증금 월세"/"유동 인구"/시설 조건 - 백엔드에 중개사 등록 기능이 아직 없어서(후순위),
   // 이미 중개사가 이 공실 정보를 입력해줬다고 가정하고 채운다. AI가 지어낸 수치가 아니라
   // "중개사 입력"(source: "agent", 주황 점) 데이터 소스로 명확히 구분해서 보여준다.
@@ -478,12 +514,12 @@ async function postNeighborhoodReport() {
   // 백엔드 industries 테이블에 licenses 컬럼이 없어 rep.reference.licenses는 항상 "확인 필요"로만 온다.
   // 업종별 필요 인허가는 업종 유형만 알면 되는 공개 정보라, 프론트에서 업종명 기준으로 채워 보여준다.
   const LICENSE_BY_INDUSTRY = {
-    "카페": "휴게음식점 영업신고 · 사업자등록",
+    "개인 카페": "휴게음식점 영업신고 · 사업자등록",
     "베이커리": "즉석판매제조가공업 신고 · 사업자등록",
     "분식": "일반음식점 영업신고 · 사업자등록",
-    "서점문구": "별도 인허가 없음(사업자등록만)",
-    "반찬": "즉석판매제조가공업 신고 · 사업자등록",
-    "과일": "별도 인허가 없음(사업자등록만)"
+    "문구점": "별도 인허가 없음(사업자등록만)",
+    "편의점": "담배소매인 지정 · 사업자등록",
+    "미용실": "미용업 신고 · 사업자등록"
   };
 
   // 시설 항목 표시 문구 - 있으면 "가능 · 상세비고", 없으면 그냥 "불가"(비고 붙일 게 없음).
@@ -563,5 +599,5 @@ async function postNeighborhoodReport() {
     };
   });
 
-  return { coins: MOCK_ME.coins, neighborhoodName: friendlyRegionName(regionCode), candidates };
+  return { neighborhoodName: friendlyRegionName(regionCode), candidates };
 }

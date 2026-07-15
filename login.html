@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>명당 - 로그인</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="css/style.css?v=40" />
+  <link rel="stylesheet" href="css/style.css?v=41" />
 </head>
 <body class="login-page">
 
@@ -16,67 +16,37 @@
 
   <main class="login-main">
 
-    <!-- 로그인 폼 (기본) -->
-    <section class="login-card" id="login-form">
+    <!-- 휴대폰 인증 로그인 -->
+    <section class="login-card" id="phone-form">
       <div class="login-head">
         <img class="login-logo" src="assets/logo.svg" alt="명당" />
-        <p class="login-tagline">로그인 후 더 많은 서비스를 즐겨보세요.</p>
+        <p class="login-tagline">휴대폰 인증으로 간편하게 시작하세요.</p>
       </div>
 
       <div class="login-fields">
         <div class="login-inputs">
-          <input type="text" id="login-id" placeholder="아이디" autocomplete="username" />
-          <input type="password" id="login-pw" placeholder="비밀번호" autocomplete="current-password" />
-          <p class="login-error" id="login-error"></p>
+          <div class="phone-row">
+            <input type="tel" id="phone-input" placeholder="휴대폰 번호 ('-' 없이 입력)" autocomplete="tel" inputmode="numeric" />
+            <button class="btn-send-inline" id="btn-send-code">인증번호 받기</button>
+          </div>
+          <p class="login-error" id="phone-error"></p>
         </div>
-        <button class="login-submit" id="btn-login">로그인</button>
-      </div>
 
-      <div class="login-links">
-        <a href="#" id="goto-signup">회원가입</a>
-        <span class="link-divider"></span>
-        <a href="#" id="find-account">계정찾기</a>
-        <span class="link-divider"></span>
-        <a href="#" id="find-password">비밀번호 찾기</a>
-      </div>
-
-      <div class="login-divider"><span>또는</span></div>
-
-      <div class="login-social">
-        <button class="social" title="네이버 로그인 (추후 연동)"><img src="assets/naver.svg" alt="네이버" /></button>
-        <button class="social" title="카카오 로그인 (추후 연동)"><img src="assets/kakao.svg" alt="카카오" /></button>
-        <button class="social" title="구글 로그인 (추후 연동)"><img src="assets/google.svg" alt="구글" /></button>
-      </div>
-    </section>
-
-    <!-- 회원가입 폼 -->
-    <section class="login-card" id="signup-form" hidden>
-      <div class="login-head">
-        <img class="login-logo" src="assets/logo.svg" alt="명당" />
-        <p class="login-tagline">가입하고 우리 동네 공실에 투표해보세요!</p>
-      </div>
-
-      <div class="login-fields">
-        <div class="login-inputs">
-          <input type="text" id="signup-nickname" placeholder="닉네임" />
-          <input type="text" id="signup-id" placeholder="아이디" autocomplete="username" />
-          <input type="password" id="signup-pw" placeholder="비밀번호" autocomplete="new-password" />
-          <input type="password" id="signup-pw2" placeholder="비밀번호 확인" autocomplete="new-password" />
-          <p class="login-error" id="signup-error"></p>
+        <!-- 인증번호 받기 누르면 아래에 표시 -->
+        <div class="login-inputs" id="code-section" hidden>
+          <input type="text" id="code-input" placeholder="인증번호 6자리" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          <p class="login-hint" id="code-hint"></p>
+          <p class="login-error" id="code-error"></p>
         </div>
-        <button class="login-submit" id="btn-signup">가입하기</button>
-      </div>
-
-      <div class="login-links">
-        <a href="#" id="goto-login">로그인으로 돌아가기</a>
+        <button class="login-submit" id="btn-verify" hidden>인증</button>
       </div>
     </section>
 
   </main>
 
-  <script src="js/config.js?v=28"></script>
-  <script src="js/auth.js?v=28"></script>
-  <script src="js/login.js?v=28"></script>
+  <script src="js/config.js?v=32"></script>
+  <script src="js/auth.js?v=32"></script>
+  <script src="js/login.js?v=32"></script>
 
 </body>
 </html>

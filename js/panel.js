@@ -5,12 +5,12 @@
 // =========================================================
 
 let currentVacancy = null;   // 투표/매장 패널에 떠 있는 상가
-let me = { coins: 0, voteHistory: [], openedPlaces: [], claimedCoupons: [] };
+let me = { voteHistory: [], openedPlaces: [], claimedCoupons: [] };
 let pendingIndustry = null;  // 투표 확인 모달에서 대기 중인 업종
 let neighborhood = null;     // 동네 현황 데이터 (fetchNeighborhood)
 let reportContext = "vacancy"; // "vacancy" | "neighborhood" - AI 리포트 생성 확인 모달이 어느 흐름에서 열렸는지
 let activeCategory = CATEGORY_TAXONOMY[0].key;  // 투표하기 패널에서 지금 보고 있는 대분류
-let selectedIndustries = new Set();             // 투표하기 패널에서 선택된 세부 업종들
+let selectedIndustry = null;                    // 투표하기 패널에서 선택된 세부 업종 (단일 선택)
 
 const panelEl = document.getElementById("vote-panel");
 const myPanelEl = document.getElementById("my-panel");
@@ -34,6 +34,15 @@ document.querySelectorAll("[data-close]").forEach((btn) => {
   };
 });
 
+// 모달: 딤(백드롭) 영역 클릭 시 닫기 (카드 내부 클릭은 유지).
+// 처리 중 로딩 모달은 바깥 클릭으로 닫지 않는다.
+document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+  if (backdrop.id === "modal-loading") return;
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.hidden = true;
+  });
+});
+
 function closeAllPanels() {
   panelEl.hidden = true;
   myPanelEl.hidden = true;
@@ -44,6 +53,17 @@ function closeAllPanels() {
   if (typeof hideNeighborhoodZone === "function") hideNeighborhoodZone();
   if (typeof hideCandidateMarkers === "function") hideCandidateMarkers();
 }
+
+// 사이드바/와이드 패널: 바깥(지도 등) 클릭 시 닫기.
+// - 패널 내부 클릭, 패널을 여는 헤더 버튼 클릭, 모달 클릭은 제외.
+document.addEventListener("click", (e) => {
+  const panels = [panelEl, myPanelEl, storePanelEl, voteSelectPanelEl, neighborhoodPanelEl];
+  if (!panels.some((p) => p && !p.hidden)) return; // 열린 패널 없음
+  if (e.target.closest("#vote-panel, #my-panel, #store-panel, #vote-select-panel, #neighborhood-panel")) return;
+  if (e.target.closest(".header-btn-group")) return; // 여는 버튼 클릭은 버튼 핸들러에 맡김
+  if (e.target.closest(".modal-backdrop")) return;   // 모달은 모달 핸들러가 처리
+  closeAllPanels();
+});
 
 async function loadMe() {
   me = await fetchMe();
@@ -85,7 +105,7 @@ function renderPanel() {
     li.innerHTML = `
       <span>${i + 1}. ${v.industry}</span>
       <span class="votes">${v.count}명</span>
-      <button class="btn-vote" title="투표하기">&#9997;</button>
+      <button class="btn-vote" title="투표">&#9997;</button>
     `;
     const btn = li.querySelector(".btn-vote");
     if (voted) {
@@ -132,7 +152,6 @@ async function doVote(industry) {
   try {
     const r = await postVote(currentVacancy.id, industry);
     currentVacancy.votes = r.votes;
-    me.coins = r.coins;
     me.voteHistory.push({
       vacancyId: currentVacancy.id,
       industry,
@@ -165,14 +184,14 @@ document.getElementById("btn-new-industry-ok").onclick = async () => {
   await doVote(industry);
 };
 
-// ---------- 헤더 "투표하기": 업종 카테고리/세부업종 다중 선택 ----------
+// ---------- 헤더 "투표하기": 업종 카테고리/세부업종 단일 선택 ----------
 function openVoteSelectPanel() {
   closeAllPanels();
-  selectedIndustries.clear();
+  selectedIndustry = null;
   activeCategory = CATEGORY_TAXONOMY[0].key;
   renderCategoryRow();
   renderSubcategoryGrid();
-  updateSelectedCount();
+  updateVoteFooterButtons();
   voteSelectPanelEl.hidden = false;
 }
 
@@ -209,44 +228,68 @@ function renderSubcategoryGrid() {
     const count = entry ? entry.count : 0;
     const iconSrc = SUBCATEGORY_ICONS[sub];
     const card = document.createElement("button");
-    card.className = "subcategory-card" + (selectedIndustries.has(sub) ? " selected" : "");
+    card.className = "subcategory-card" + (selectedIndustry === sub ? " selected" : "");
     card.innerHTML = `
       ${iconSrc ? `<span class="sub-icon" style="-webkit-mask-image:url(${iconSrc}); mask-image:url(${iconSrc})"></span>` : ""}
       <b>${sub}</b>
       <span class="sub-count">현재 ${count}표</span>
     `;
     card.onclick = () => {
-      if (selectedIndustries.has(sub)) selectedIndustries.delete(sub);
-      else selectedIndustries.add(sub);
+      selectedIndustry = selectedIndustry === sub ? null : sub;
       renderSubcategoryGrid();
-      updateSelectedCount();
+      updateVoteFooterButtons();
     };
     grid.appendChild(card);
   });
 }
 
-function updateSelectedCount() {
-  const n = selectedIndustries.size;
-  document.getElementById("selected-count").innerText = `${n}개 선택됨`;
-  document.getElementById("btn-submit-vote-select").disabled = n === 0;
+function updateVoteFooterButtons() {
+  const disabled = !selectedIndustry;
+  document.getElementById("btn-free-vote").disabled = disabled;
+  document.getElementById("btn-paid-vote").disabled = disabled;
 }
 
-document.getElementById("btn-submit-vote-select").onclick = () => {
-  if (selectedIndustries.size === 0) return;
+/** 무료 투표하기 (비용 없음, 확인 모달만 거침) */
+document.getElementById("btn-free-vote").onclick = () => {
+  if (!selectedIndustry) return;
+  document.getElementById("vs-confirm-title").innerText = `"${selectedIndustry}"에 투표하시겠습니까?`;
   openModal("modal-vote-select-confirm");
 };
 
 document.getElementById("btn-vote-select-confirm-ok").onclick = async () => {
   closeModal("modal-vote-select-confirm");
+  if (!selectedIndustry) return;
   try {
-    const r = await postNeighborhoodVoteBatch([...selectedIndustries]);
+    const r = await postNeighborhoodVoteBatch([selectedIndustry]);
     neighborhood.votes = r.votes;
     neighborhood.myVotes = r.myVotes;
-    me.coins = r.coins;
-    selectedIndustries.clear();
+    selectedIndustry = null;
     renderSubcategoryGrid();
-    updateSelectedCount();
+    updateVoteFooterButtons();
     alert("투표가 반영됐어요! 동네 현황에서 확인해보세요.");
+  } catch (err) {
+    console.error(err);
+    alert("투표 처리 중 오류가 발생했습니다.");
+  }
+};
+
+/** 10,000원 투표하기 (실결제, 냥과 무관 - 창업 확정 시 12,000원 업종 이용권으로 교환) */
+document.getElementById("btn-paid-vote").onclick = () => {
+  if (!selectedIndustry) return;
+  openModal("modal-paid-vote-confirm");
+};
+
+document.getElementById("btn-paid-vote-confirm-ok").onclick = async () => {
+  if (!selectedIndustry) return;
+  try {
+    const r = await postPaidVote(selectedIndustry);
+    neighborhood.votes = r.votes;
+    neighborhood.myVotes = r.myVotes;
+    closeModal("modal-paid-vote-confirm");
+    selectedIndustry = null;
+    renderSubcategoryGrid();
+    updateVoteFooterButtons();
+    alert("투표가 반영됐어요! 창업이 확정되면 12,000원 업종 이용권으로 교환돼요.");
   } catch (err) {
     console.error(err);
     alert("투표 처리 중 오류가 발생했습니다.");
@@ -277,7 +320,7 @@ function renderNeighborhoodPanel() {
   rankEl.innerHTML = "";
   votes.slice(0, 5).forEach((v, i) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span>${i + 1}. ${v.industry}</span><span class="votes">${v.count}명</span>`;
+    li.innerHTML = `<span>${i + 1}. ${v.industry}</span><span class="votes">${v.count}</span>`;
     rankEl.appendChild(li);
   });
 
@@ -364,6 +407,24 @@ function showCoupon(vacancy) {
   openModal("modal-coupon");
 }
 
+/** 2차 상세 말풍선의 '쿠폰 받기' — 사이드바 없이 쿠폰 발급/재열람 (map.js에서 호출) */
+async function claimCouponFor(vacancy) {
+  if (!vacancy) return;
+  try {
+    if (me.claimedCoupons.includes(vacancy.id)) {
+      showCoupon(vacancy);       // 이미 받았으면 다시 보기
+      return;
+    }
+    const coupon = await postClaimCoupon(vacancy.id);
+    if (!me.claimedCoupons.includes(vacancy.id)) me.claimedCoupons.push(vacancy.id);
+    drawCoupon(coupon);
+    openModal("modal-coupon");
+  } catch (err) {
+    console.error(err);
+    alert("쿠폰 발급 중 오류가 발생했습니다.");
+  }
+}
+
 // ---------- AI 레포트: 확인 → 로딩 → 리포트 ----------
 document.getElementById("btn-report").onclick = () => {
   if (!currentVacancy) return;
@@ -382,7 +443,6 @@ document.getElementById("btn-report-confirm-ok").onclick = async () => {
     const report = isNeighborhood
       ? await postNeighborhoodReport()
       : await postGenerateReport(currentVacancy.id);
-    me.coins = report.coins;
     if (isNeighborhood) {
       renderNeighborhoodCandidates(report);
     } else {
@@ -598,7 +658,7 @@ function renderCandidateReportBody() {
     </div>
 
     <div class="accordion">
-      <button class="accordion-head"><span>💰 계약 조건 <small>중개사 입력</small></span><i class="chev">&#8964;</i></button>
+      <button class="accordion-head"><span>계약 조건 <small>중개사 입력</small></span><i class="chev">&#8964;</i></button>
       <div class="accordion-body">
         <p class="accordion-note">담당 중개사가 확인·입력한 정보입니다. 창업 전 실측을 권장합니다.</p>
         ${condRows(c.contract)}
@@ -644,9 +704,9 @@ document.getElementById("btn-my").onclick = () => {
 };
 
 function renderMyPanel() {
+  // v3: 투표는 동네 단위라 '내가 고른 명당(공실별 투표)'은 없앰.
+  // '받은 쿠폰'도 명당 목록과 기능이 겹쳐 제거 → 여기선 창업 완료된 '명당'만 보여준다.
   const openedEl = document.getElementById("opened-list");
-  const historyEl = document.getElementById("history-list");
-
   openedEl.innerHTML = "";
   if (me.openedPlaces.length === 0) {
     openedEl.innerHTML = `<li class="empty">아직 창업 완료된 곳이 없어요</li>`;
@@ -658,51 +718,16 @@ function renderMyPanel() {
     li.querySelector(".btn-goto").onclick = () => gotoVacancy(p.vacancyId);
     openedEl.appendChild(li);
   });
-
-  // 창업 완료된 상가는 투표 이력에서 제외 (위 목록과 중복 방지)
-  const openedIds = me.openedPlaces.map((p) => p.vacancyId);
-  const history = me.voteHistory.filter((h) => !openedIds.includes(h.vacancyId));
-
-  historyEl.innerHTML = "";
-  if (history.length === 0) {
-    historyEl.innerHTML = `<li class="empty">아직 투표 이력이 없어요</li>`;
-  }
-  history.forEach((h) => {
-    const li = document.createElement("li");
-    li.innerHTML = `<span>${h.industry}<br/><small>${h.addr}</small></span>
-                    <button class="btn-goto">이동하기</button>`;
-    li.querySelector(".btn-goto").onclick = () => gotoVacancy(h.vacancyId);
-    historyEl.appendChild(li);
-  });
-
-  // 내 쿠폰: 받아둔 쿠폰 언제든 다시 보기
-  const couponEl = document.getElementById("coupon-list");
-  couponEl.innerHTML = "";
-  if (me.claimedCoupons.length === 0) {
-    couponEl.innerHTML = `<li class="empty">아직 받은 쿠폰이 없어요</li>`;
-  }
-  me.claimedCoupons.forEach((vacancyId) => {
-    const v = window.__vacancies?.find((x) => x.id === vacancyId);
-    if (!v) return;
-    const li = document.createElement("li");
-    li.innerHTML = `<span>&#127915; 디스카운트 쿠폰<br/><small>${v.openedName}</small></span>
-                    <button class="btn-goto">보기</button>`;
-    li.querySelector(".btn-goto").onclick = () => showCoupon(v);
-    couponEl.appendChild(li);
-  });
 }
 
-/** 이동하기: 지도 이동 + 상태에 맞는 패널 오픈 */
+/** 이동하기: 사이드바는 유지한 채 해당 주소로 줌인 */
 function gotoVacancy(vacancyId) {
   const v = window.__vacancies?.find((x) => x.id === vacancyId);
   if (!v) return;
   if (typeof map !== "undefined" && map) {
-    map.panTo(new kakao.maps.LatLng(v.lat, v.lng));
-  }
-  if (v.status === "open" || v.status === "construction") {
-    openStorePanel(v);
-  } else {
-    openPanel(v);
+    const pos = new kakao.maps.LatLng(v.lat, v.lng);
+    map.setCenter(pos);
+    map.setLevel(2);  // 줌인 (기본 레벨 4 → 2)
   }
 }
 

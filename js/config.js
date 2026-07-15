@@ -17,11 +17,12 @@ const MAP_LEVEL = 4;
 
 // 공실(건물) 단위 투표·쿠폰·개별 리포트 — 백엔드가 이 데이터 자체를 갖고 있지 않음
 // (v3 "동네 투표 전환"으로 폐기된 모델). 시연용으로 계속 목업 유지.
-const USE_MOCK_DATA = true;
-const API_BASE_URL = "http://localhost:8000/api"; // 실제로 쓰이지 않음(위 이유) — 참고용으로 남겨둠
+const USE_MOCK_DATA = false;
+const API_BASE_URL = "http://localhost:8000/api"; // 동네주문-백엔드(FastAPI)가 이 주소에 떠 있어야 함
 
 // ===== 동네 투표·리포트(헤더 "투표하기"/"동네 현황") — 실제 백엔드 v3 연동 =====
 // 라우트에 /api 접두사가 없다("/regions", "/votes/batch", "/report" 등 루트 경로).
+// 동네주문-백엔드(main.py)에 이 라우트들을 직접 추가해뒀다 - 포트 8000 백엔드 하나로 통합.
 const NEIGHBORHOOD_USE_MOCK = false;
 const BACKEND_BASE_URL = "http://localhost:8000";
 
@@ -30,11 +31,3 @@ const BACKEND_BASE_URL = "http://localhost:8000";
 // 리포트의 거리감쇠(500~800m)가 0으로 죽지 않는다. 프론트 지도 중심(MAP_CENTER, 포항 중앙동)과는
 // 별개 — 지도 표시(목업 공실)와 실제 동네 투표 위치는 다른 동네라서 분리해뒀다.
 const NEIGHBORHOOD_VOTE_LOCATION = { lat: 36.0521, lng: 129.3612 };
-
-// ===== 냥(엽전) 정책 =====
-const DEFAULT_COINS = 50;        // 가입 시 기본 지급
-const COINS_PER_PAYMENT = 100;   // 1,000원 결제 시 충전되는 냥
-const PAYMENT_KRW = 1000;        // 1회 결제 금액(원)
-const VOTE_COST = 100;           // 공실(건물) 투표 1회 차감 — 목업 플로우 전용
-const NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY = 100; // 동네 투표 1업종당 차감(백엔드 1,000원=100냥 고정과 일치)
-const REPORT_COST = 50;          // AI 리포트 생성 차감
