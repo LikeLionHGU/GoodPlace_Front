@@ -668,17 +668,15 @@ function renderMyPanel() {
   });
 }
 
-/** 이동하기: 지도 이동 + 상태에 맞는 패널 오픈 */
+/** 이동하기: 사이드바 닫고 해당 주소로 줌인 */
 function gotoVacancy(vacancyId) {
   const v = window.__vacancies?.find((x) => x.id === vacancyId);
   if (!v) return;
+  closeAllPanels(); // 사이드바 닫기
   if (typeof map !== "undefined" && map) {
-    map.panTo(new kakao.maps.LatLng(v.lat, v.lng));
-  }
-  if (v.status === "open" || v.status === "construction") {
-    openStorePanel(v);
-  } else {
-    openPanel(v);
+    const pos = new kakao.maps.LatLng(v.lat, v.lng);
+    map.setCenter(pos);
+    map.setLevel(2);  // 줌인 (기본 레벨 4 → 2)
   }
 }
 
