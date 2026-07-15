@@ -668,11 +668,10 @@ function renderMyPanel() {
   });
 }
 
-/** 이동하기: 사이드바 닫고 해당 주소로 줌인 */
+/** 이동하기: 사이드바는 유지한 채 해당 주소로 줌인 */
 function gotoVacancy(vacancyId) {
   const v = window.__vacancies?.find((x) => x.id === vacancyId);
   if (!v) return;
-  closeAllPanels(); // 사이드바 닫기
   if (typeof map !== "undefined" && map) {
     const pos = new kakao.maps.LatLng(v.lat, v.lng);
     map.setCenter(pos);
