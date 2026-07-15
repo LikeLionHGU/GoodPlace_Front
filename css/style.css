@@ -346,7 +346,8 @@ main {
   display: none;
   z-index: 11;
 }
-.vacancy-overlay:hover .overlay-bubble {
+.vacancy-overlay:hover .overlay-bubble,
+.vacancy-overlay.pinned .overlay-bubble {
   display: block;
 }
 
@@ -501,6 +502,9 @@ main {
   font-size: 13px;
   color: #333;
   line-height: 1.5;
+  white-space: normal;       /* 한 줄로 뻗지 않게 */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .btn-coupon-detail {
   width: 100%;

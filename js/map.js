@@ -116,7 +116,20 @@ function createVacancyOverlay(v) {
   return overlay;
 }
 
-/** 창업 매장 말풍선: 자세히 보기(2차 열기) · 접기 · 쿠폰 받기 핸들러 */
+/** 열린 2차 말풍선(pinned) 모두 닫기 */
+function closePinnedBubbles() {
+  document.querySelectorAll(".vacancy-overlay.pinned").forEach((el) => {
+    el.classList.remove("pinned");
+    const d = el.querySelector(".store-detail");
+    if (d) d.hidden = true;
+  });
+}
+
+// 말풍선 바깥(지도 등) 클릭 시 열린 2차 말풍선 닫기.
+// 말풍선 내부 클릭은 stopPropagation 하므로 여기까지 오지 않는다.
+document.addEventListener("click", closePinnedBubbles);
+
+/** 창업 매장 말풍선: 자세히 보기(2차 열기·고정) · 접기 · 쿠폰 받기 핸들러 */
 function wireStoreBubble(content, v) {
   const wrap = content.querySelector(".store-bubble-wrap");
   const detail = content.querySelector(".store-detail");
@@ -127,6 +140,8 @@ function wireStoreBubble(content, v) {
   if (moreBtn && detail && wrap) {
     moreBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      closePinnedBubbles();          // 다른 핀의 열린 말풍선은 닫고
+      content.classList.add("pinned"); // 이 말풍선을 고정 → 호버가 끊겨도 유지(쿠폰까지 클릭 가능)
       detail.hidden = false;
       // 뷰포트 오른쪽으로 넘치면 왼쪽에 붙인다
       wrap.classList.remove("flip-left");
@@ -138,6 +153,7 @@ function wireStoreBubble(content, v) {
     backBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       detail.hidden = true;
+      content.classList.remove("pinned");
     });
   }
   if (couponBtn) {
