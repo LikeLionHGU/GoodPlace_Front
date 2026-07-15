@@ -1,0 +1,246 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>명당 - 우리동네 공실 투표</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <!-- ?v= 숫자는 캐시 버스터: 파일 수정 후 화면에 반영 안 되면 숫자를 올리세요 -->
+  <link rel="stylesheet" href="css/style.css?v=24" />
+</head>
+<body>
+
+  <!-- 상단 바: 서비스명 + 냥 잔액/프로필 -->
+  <header id="topbar">
+    <h1><img src="assets/logo.svg" alt="명당" /></h1>
+    <div class="topbar-right">
+      <span id="coin-count"><img src="assets/icon-coin-ring.svg" alt="냥" /> 50냥</span>
+      <img class="profile-icon" src="assets/profile.svg" alt="내 정보" title="내 정보" />
+    </div>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <!-- 좌상단: 나의 명당 / 투표하기 -->
+    <div class="header-btn-group left">
+      <button id="btn-my"><img src="assets/icon-person.svg" alt="" /> 나의 명당</button>
+      <button id="btn-open-vote-select"><img src="assets/icon-target.svg" alt="" /> 투표하기</button>
+    </div>
+
+    <!-- 우상단: 동네 현황 -->
+    <div class="header-btn-group right">
+      <button id="btn-open-neighborhood"><img src="assets/icon-home.svg" alt="" /> 동네 현황</button>
+    </div>
+
+    <!-- 내 명당 패널 (창업 완료 / 투표 이력) -->
+    <aside id="my-panel" hidden>
+      <button class="btn-panel-back" data-close="my-panel">&#8249;</button>
+      <p class="section-label">창업 완료된</p>
+      <ul id="opened-list" class="my-list"></ul>
+      <p class="section-label">투표 이력</p>
+      <ul id="history-list" class="my-list"></ul>
+      <p class="section-label">내 쿠폰</p>
+      <ul id="coupon-list" class="my-list"></ul>
+    </aside>
+
+    <!-- 빈 상가/투표 중 상가 클릭 시: 투표 패널 -->
+    <aside id="vote-panel" hidden>
+      <button class="btn-panel-back" data-close="vote-panel">&#8249;</button>
+
+      <section class="total-votes">
+        <p class="section-label">현재 투표수</p>
+        <p class="count"><span id="total-count">0</span> <small>명</small></p>
+      </section>
+
+      <section class="ranking">
+        <p class="section-label">투표 순위</p>
+        <div class="rank-header">
+          <span>업종</span><span>투표수</span><span>투표하기</span>
+        </div>
+        <ul id="rank-list"></ul>
+      </section>
+
+      <section class="my-votes">
+        <p class="section-label">내 투표 보기</p>
+        <div id="my-vote-box" class="my-vote-box"></div>
+      </section>
+
+      <div class="panel-actions">
+        <button id="btn-new-vote">새로운 업종 투표</button>
+        <button id="btn-report">AI레포트 생성 <small>(50냥)</small></button>
+      </div>
+    </aside>
+
+    <!-- 새로 생긴 매장/공사 중 상가 클릭 시: 매장 정보 패널 -->
+    <aside id="store-panel" hidden>
+      <button class="btn-panel-back" data-close="store-panel">&#8249;</button>
+      <div id="store-icon" class="store-icon">&#127913;</div>
+      <h2 id="store-name"></h2>
+      <p id="store-status" class="store-status"></p>
+      <p id="store-addr" class="store-addr"></p>
+      <div class="store-stat">
+        <span>이 가게를 만든 투표</span>
+        <b id="store-votes">0명</b>
+      </div>
+      <div class="panel-actions">
+        <button id="btn-claim-coupon" hidden>&#127915; 쿠폰 받기</button>
+        <p id="store-no-coupon" class="store-note" hidden>이 상가에 투표했다면 개업 시 쿠폰을 받을 수 있어요</p>
+      </div>
+    </aside>
+
+    <!-- 헤더 "투표하기" 클릭 시: 업종 카테고리/세부업종 다중 선택 패널 -->
+    <div class="wide-panel" id="vote-select-panel" hidden>
+      <div class="wide-panel-inner">
+        <h2>우리 동네에 뭐가 생기면 좋을까요?</h2>
+        <p class="wide-panel-sub">업종을 골라 투표하세요 (여러 개 선택 가능)</p>
+
+        <div class="category-row" id="category-row"></div>
+
+        <div class="subcategory-box">
+          <p class="subcategory-title"><b id="subcategory-cat-name"></b> 세부 업종을 눌러 선택</p>
+          <div class="subcategory-grid" id="subcategory-grid"></div>
+        </div>
+
+        <div class="vote-select-footer">
+          <span id="selected-count">0개 선택됨</span>
+          <button id="btn-submit-vote-select" class="primary" disabled>투표하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 헤더 "동네 현황" 클릭 시: 동네 전체 투표 순위/내 투표 패널 -->
+    <aside id="neighborhood-panel" hidden>
+      <button class="btn-panel-back" data-close="neighborhood-panel">&#8249;</button>
+      <p class="section-label neighborhood-name">현재 동네: <b id="neighborhood-name"></b></p>
+      <select id="neighborhood-select">
+        <option>중앙동 (육거리)</option>
+      </select>
+
+      <p class="section-label">현재 투표 인원</p>
+      <p class="count"><span id="neighborhood-total">0</span> <small>명</small></p>
+
+      <p class="section-label">투표 순위</p>
+      <ul id="neighborhood-rank-list" class="rank-plain-list"></ul>
+
+      <p class="section-label">나의 투표</p>
+      <ul id="neighborhood-my-list" class="my-list"></ul>
+
+      <div class="panel-actions">
+        <button id="btn-neighborhood-report" class="primary">창업하기</button>
+      </div>
+    </aside>
+
+    <!-- ===== 모달들 ===== -->
+
+    <!-- 새로운 업종 입력 -->
+    <div class="modal-backdrop" id="modal-new-industry" hidden>
+      <div class="modal-card">
+        <div class="modal-icon">&#128499;</div>
+        <h3>새로운 업종을 입력해주세요</h3>
+        <p class="modal-desc">투표하면 100냥이 차감됩니다.</p>
+        <input type="text" id="new-industry-input" placeholder="ex. 김치찜, 삼겹살, 미용실" />
+        <div class="modal-actions">
+          <button data-close="modal-new-industry">취소</button>
+          <button class="primary" id="btn-new-industry-ok">투표</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 투표 확인 -->
+    <div class="modal-backdrop" id="modal-vote-confirm" hidden>
+      <div class="modal-card">
+        <div class="modal-icon">&#128499;</div>
+        <h3 id="vote-confirm-title">투표하시겠습니까?</h3>
+        <p class="modal-desc"><b>100냥</b>이 차감됩니다.<br/>가게가 생기면 쿠폰을 드려요. 불발 시 전액 환불!</p>
+        <div class="modal-actions">
+          <button data-close="modal-vote-confirm">취소</button>
+          <button class="primary" id="btn-vote-confirm-ok">투표</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 업종 다중 선택 투표 확인 -->
+    <div class="modal-backdrop" id="modal-vote-select-confirm" hidden>
+      <div class="modal-card">
+        <div class="target-icon-circle"><span class="target-icon-mask"></span></div>
+        <h3>투자하기</h3>
+        <p class="modal-desc">보유: <b id="vs-confirm-current">0냥</b> · 필요: <b>100냥</b></p>
+        <div class="modal-actions">
+          <button data-close="modal-vote-select-confirm">취소</button>
+          <button class="primary" id="btn-vote-select-confirm-ok">투자하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 냥 부족 → 결제 -->
+    <div class="modal-backdrop" id="modal-charge" hidden>
+      <div class="modal-card">
+        <div class="modal-icon">&#129689;</div>
+        <h3>냥이 부족해요</h3>
+        <p class="modal-desc">보유: <b id="charge-current">0냥</b> · 필요: <b id="charge-need">100냥</b><br/>1,000원 결제 시 <b>100냥</b>이 충전됩니다.</p>
+        <div class="modal-actions">
+          <button data-close="modal-charge">취소</button>
+          <button class="primary" id="btn-charge-ok">1,000원 결제하기</button>
+        </div>
+        <p class="source">지금은 모의 결제 - 실제 결제 연동은 추후</p>
+      </div>
+    </div>
+
+    <!-- AI 레포트 생성 확인 -->
+    <div class="modal-backdrop" id="modal-report-confirm" hidden>
+      <div class="modal-card">
+        <div class="modal-icon">&#128203;</div>
+        <h3>레포트를 생성하시겠습니까?</h3>
+        <p class="modal-desc"><b>50냥</b>이 차감됩니다.<br/>이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
+        <div class="modal-actions">
+          <button data-close="modal-report-confirm">취소</button>
+          <button class="primary" id="btn-report-confirm-ok">생성</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 레포트 생성 로딩 -->
+    <div class="modal-backdrop" id="modal-loading" hidden>
+      <div class="modal-card">
+        <div class="spinner"></div>
+        <h3>상권 데이터를 분석하고 있어요</h3>
+        <p class="modal-desc">잠시만 기다려 주세요</p>
+      </div>
+    </div>
+
+    <!-- 쿠폰 (새로 생긴 매장에서 "쿠폰 받기") -->
+    <div class="modal-backdrop" id="modal-coupon" hidden>
+      <div class="modal-card">
+        <h3>내가 투표한 상가에 매장이 새로 생겼어요!</h3>
+        <canvas id="coupon-canvas" width="280" height="140"></canvas>
+        <p class="modal-desc">받은 쿠폰은 해당 매장에 문의하여<br/>사용할 수 있습니다.</p>
+        <div class="modal-actions">
+          <button data-close="modal-coupon">닫기</button>
+          <button class="primary" id="btn-coupon-download">이미지 다운</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 창업 기회 리포트 -->
+    <div class="modal-backdrop" id="report-modal" hidden>
+      <div class="modal-card report-card">
+        <button id="btn-report-close" data-close="report-modal" title="닫기">&times;</button>
+        <p class="report-kicker">AI 창업 기회 리포트</p>
+        <h2 id="report-title"></h2>
+        <p id="report-addr" class="report-addr"></p>
+        <div id="report-body"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 설정 → 인증 → 데이터 → 패널 UI → 지도 로직 순서로 로드 -->
+  <script src="js/config.js?v=24"></script>
+  <script src="js/auth.js?v=24"></script>
+  <script>requireLogin();</script>
+  <script src="js/vacancies.js?v=24"></script>
+  <script src="js/panel.js?v=24"></script>
+  <script src="js/map.js?v=24"></script>
+
+</body>
+</html>
