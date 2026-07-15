@@ -385,8 +385,7 @@ main {
 /* wrap = 1차 카드 + (자세히 보기 시) 2차 말풍선을 가로로 나란히 두는 컨테이너 */
 .store-bubble-wrap {
   position: relative;
-  display: inline-flex;
-  align-items: flex-start;
+  display: inline-block; /* 1차 카드만 흐름에 둔다 → overlay-bubble 중앙정렬이 카드에만 적용(2차는 absolute) */
   margin-top: 8px;
 }
 .store-card {
@@ -461,21 +460,22 @@ main {
 
 /* 2차 상세 말풍선 (자세히 보기 → 1차 오른쪽에 열림) */
 .store-detail {
+  position: absolute;      /* 1차 카드 흐름에서 빼서 카드 중앙정렬을 흔들지 않는다 */
+  top: 0;
+  left: calc(100% + 8px);  /* 1차 카드 오른쪽에 */
   width: 220px;
-  margin-left: 8px;
   padding: 14px 16px 16px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   text-align: left;
-  flex-shrink: 0;
+  box-sizing: border-box;
 }
 .store-detail[hidden] { display: none; }
 /* 뷰포트 오른쪽으로 넘치면 왼쪽에 붙인다 */
 .store-bubble-wrap.flip-left .store-detail {
-  order: -1;
-  margin-left: 0;
-  margin-right: 8px;
+  left: auto;
+  right: calc(100% + 8px);
 }
 .store-detail-back {
   border: none;
@@ -528,7 +528,7 @@ main {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   padding: 14px;
   box-sizing: border-box;
-  z-index: 12;
+  z-index: 16; /* 상단 버튼(15)보다 앞, 고정 헤더(20)보다는 뒤 → 사이드바가 버튼을 덮는다 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
