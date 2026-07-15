@@ -702,9 +702,9 @@ document.getElementById("btn-my").onclick = () => {
 };
 
 function renderMyPanel() {
+  // v3: 투표는 동네 단위라 '내가 고른 명당(공실별 투표)'은 없앰.
+  // '받은 쿠폰'도 명당 목록과 기능이 겹쳐 제거 → 여기선 창업 완료된 '명당'만 보여준다.
   const openedEl = document.getElementById("opened-list");
-  const historyEl = document.getElementById("history-list");
-
   openedEl.innerHTML = "";
   if (me.openedPlaces.length === 0) {
     openedEl.innerHTML = `<li class="empty">아직 창업 완료된 곳이 없어요</li>`;
@@ -715,38 +715,6 @@ function renderMyPanel() {
                     <button class="btn-goto">이동하기</button>`;
     li.querySelector(".btn-goto").onclick = () => gotoVacancy(p.vacancyId);
     openedEl.appendChild(li);
-  });
-
-  // 창업 완료된 상가는 투표 이력에서 제외 (위 목록과 중복 방지)
-  const openedIds = me.openedPlaces.map((p) => p.vacancyId);
-  const history = me.voteHistory.filter((h) => !openedIds.includes(h.vacancyId));
-
-  historyEl.innerHTML = "";
-  if (history.length === 0) {
-    historyEl.innerHTML = `<li class="empty">아직 투표 이력이 없어요</li>`;
-  }
-  history.forEach((h) => {
-    const li = document.createElement("li");
-    li.innerHTML = `<span>${h.industry}<br/><small>${h.addr}</small></span>
-                    <button class="btn-goto">이동하기</button>`;
-    li.querySelector(".btn-goto").onclick = () => gotoVacancy(h.vacancyId);
-    historyEl.appendChild(li);
-  });
-
-  // 내 쿠폰: 받아둔 쿠폰 언제든 다시 보기
-  const couponEl = document.getElementById("coupon-list");
-  couponEl.innerHTML = "";
-  if (me.claimedCoupons.length === 0) {
-    couponEl.innerHTML = `<li class="empty">아직 받은 쿠폰이 없어요</li>`;
-  }
-  me.claimedCoupons.forEach((vacancyId) => {
-    const v = window.__vacancies?.find((x) => x.id === vacancyId);
-    if (!v) return;
-    const li = document.createElement("li");
-    li.innerHTML = `<span>&#127915; 디스카운트 쿠폰<br/><small>${v.openedName}</small></span>
-                    <button class="btn-goto">보기</button>`;
-    li.querySelector(".btn-goto").onclick = () => showCoupon(v);
-    couponEl.appendChild(li);
   });
 }
 
