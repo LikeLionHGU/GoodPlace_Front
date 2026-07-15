@@ -1,13 +1,12 @@
 // =========================================================
 // 패널 + 모달 UI 로직
 //  - 투표 패널 (빈 상가/투표 중) · 매장 패널 (공사 중/개업)
-//  - 내 명당, 냥 결제, 쿠폰, AI 리포트
+//  - 내 명당, 쿠폰, AI 리포트
 // =========================================================
 
 let currentVacancy = null;   // 투표/매장 패널에 떠 있는 상가
-let me = { coins: 0, voteHistory: [], openedPlaces: [], claimedCoupons: [] };
+let me = { voteHistory: [], openedPlaces: [], claimedCoupons: [] };
 let pendingIndustry = null;  // 투표 확인 모달에서 대기 중인 업종
-let afterCharge = null;      // 결제 완료 후 이어서 실행할 동작
 let neighborhood = null;     // 동네 현황 데이터 (fetchNeighborhood)
 let reportContext = "vacancy"; // "vacancy" | "neighborhood" - AI 리포트 생성 확인 모달이 어느 흐름에서 열렸는지
 let activeCategory = CATEGORY_TAXONOMY[0].key;  // 투표하기 패널에서 지금 보고 있는 대분류
@@ -21,7 +20,6 @@ const neighborhoodPanelEl = document.getElementById("neighborhood-panel");
 const rankListEl = document.getElementById("rank-list");
 const myVoteBoxEl = document.getElementById("my-vote-box");
 const totalCountEl = document.getElementById("total-count");
-const coinCountEl = document.getElementById("coin-count");
 
 // ---------- 공용 ----------
 function openModal(id) { document.getElementById(id).hidden = false; }
@@ -61,11 +59,6 @@ document.addEventListener("click", (e) => {
 
 async function loadMe() {
   me = await fetchMe();
-  renderTopbar();
-}
-
-function renderTopbar() {
-  coinCountEl.innerHTML = `<img src="assets/icon-coin-ring.svg" alt="냥" /> ${me.coins}냥`;
 }
 
 // 프로필 아이콘 → 로그아웃
@@ -78,34 +71,6 @@ document.querySelector(".profile-icon").onclick = () => {
 function myVoteFor(vacancyId) {
   return me.voteHistory.find((h) => h.vacancyId === vacancyId) || null;
 }
-
-// ---------- 냥 결제 ----------
-/** 냥이 부족하면 결제 모달을 띄우고 true 반환. onCharged = 결제 후 이어갈 동작 */
-function needCharge(cost, onCharged) {
-  if (me.coins >= cost) return false;
-  document.getElementById("charge-current").innerText = `${me.coins}냥`;
-  document.getElementById("charge-need").innerText = `${cost}냥`;
-  afterCharge = onCharged || null;
-  openModal("modal-charge");
-  return true;
-}
-
-document.getElementById("btn-charge-ok").onclick = async () => {
-  try {
-    const r = await postPayment();
-    me.coins = r.coins;
-    renderTopbar();
-    closeModal("modal-charge");
-    if (afterCharge) {
-      const next = afterCharge;
-      afterCharge = null;
-      next();
-    }
-  } catch (err) {
-    console.error(err);
-    alert("결제 처리 중 오류가 발생했습니다.");
-  }
-};
 
 // ---------- 투표 패널 (empty / voting) ----------
 function openPanel(vacancy) {
@@ -132,7 +97,7 @@ function renderPanel() {
     li.innerHTML = `
       <span>${i + 1}. ${v.industry}</span>
       <span class="votes">${v.count}명</span>
-      <button class="btn-vote" title="투표 (100냥)">&#9997;</button>
+      <button class="btn-vote" title="투표">&#9997;</button>
     `;
     const btn = li.querySelector(".btn-vote");
     if (voted) {
@@ -154,8 +119,6 @@ function renderPanel() {
   } else {
     myVoteBoxEl.innerHTML = `<span class="empty">아직 이 상가에 투표하지 않았어요</span>`;
   }
-
-  renderTopbar();
 }
 
 // ---------- 투표 플로우 ----------
@@ -164,7 +127,6 @@ function askVote(industry) {
     alert("이미 이 상가에 투표했어요. (상가당 1회)");
     return;
   }
-  if (needCharge(VOTE_COST, () => askVote(industry))) return;
   pendingIndustry = industry;
   document.getElementById("vote-confirm-title").innerText = `"${industry}"에 투표하시겠습니까?`;
   openModal("modal-vote-confirm");
@@ -182,7 +144,6 @@ async function doVote(industry) {
   try {
     const r = await postVote(currentVacancy.id, industry);
     currentVacancy.votes = r.votes;
-    me.coins = r.coins;
     me.voteHistory.push({
       vacancyId: currentVacancy.id,
       industry,
@@ -203,7 +164,6 @@ document.getElementById("btn-new-vote").onclick = () => {
     alert("이미 이 상가에 투표했어요. (상가당 1회)");
     return;
   }
-  if (needCharge(VOTE_COST, () => document.getElementById("btn-new-vote").onclick())) return;
   document.getElementById("new-industry-input").value = "";
   openModal("modal-new-industry");
   document.getElementById("new-industry-input").focus();
@@ -284,11 +244,7 @@ function updateSelectedCount() {
 
 document.getElementById("btn-submit-vote-select").onclick = () => {
   if (selectedIndustries.size === 0) return;
-  // 실제 백엔드는 업종 1개당 100냥 고정 차감(1,000원) — 선택 개수에 비례해서 확인해야 한다.
-  const cost = NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY * selectedIndustries.size;
-  if (needCharge(cost, () => document.getElementById("btn-submit-vote-select").onclick())) return;
-  document.getElementById("vs-confirm-current").innerText = `${me.coins}냥`;
-  document.getElementById("vs-confirm-need").innerText = `${cost}냥`;
+  document.getElementById("vs-confirm-count").innerText = `${selectedIndustries.size}개`;
   openModal("modal-vote-select-confirm");
 };
 
@@ -298,8 +254,6 @@ document.getElementById("btn-vote-select-confirm-ok").onclick = async () => {
     const r = await postNeighborhoodVoteBatch([...selectedIndustries]);
     neighborhood.votes = r.votes;
     neighborhood.myVotes = r.myVotes;
-    me.coins = r.coins;
-    renderTopbar();
     selectedIndustries.clear();
     renderSubcategoryGrid();
     updateSelectedCount();
@@ -351,7 +305,6 @@ function renderNeighborhoodPanel() {
 }
 
 document.getElementById("btn-neighborhood-report").onclick = () => {
-  if (needCharge(REPORT_COST, () => document.getElementById("btn-neighborhood-report").onclick())) return;
   openModal("modal-report-confirm");
   reportContext = "neighborhood";
 };
@@ -437,10 +390,9 @@ async function claimCouponFor(vacancy) {
   }
 }
 
-// ---------- AI 레포트: 확인 → (냥 확인) → 로딩 → 리포트 ----------
+// ---------- AI 레포트: 확인 → 로딩 → 리포트 ----------
 document.getElementById("btn-report").onclick = () => {
   if (!currentVacancy) return;
-  if (needCharge(REPORT_COST, () => document.getElementById("btn-report").onclick())) return;
   reportContext = "vacancy";
   openModal("modal-report-confirm");
 };
@@ -453,8 +405,6 @@ document.getElementById("btn-report-confirm-ok").onclick = async () => {
     const report = isNeighborhood
       ? await postNeighborhoodReport()
       : await postGenerateReport(currentVacancy.id);
-    me.coins = report.coins;
-    renderTopbar();
     if (isNeighborhood) {
       renderNeighborhoodCandidates(report);
     } else {

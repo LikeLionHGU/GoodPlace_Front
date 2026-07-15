@@ -19,12 +19,12 @@ function saveUsers(users) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
-/** POST /auth/signup  body:{id, pw, nickname} - 가입 (기본 50냥 지급) */
+/** POST /auth/signup  body:{id, pw, nickname} - 가입 */
 async function postSignup(id, pw, nickname) {
   if (USE_MOCK_DATA) {
     const users = loadUsers();
     if (users[id]) throw new Error("이미 사용 중인 아이디예요.");
-    users[id] = { pw, nickname, coins: DEFAULT_COINS };
+    users[id] = { pw, nickname };
     saveUsers(users);
     return { id, nickname };
   }

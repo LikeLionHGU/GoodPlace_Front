@@ -177,9 +177,7 @@ function saveMyNeighborhoodVotes(regionCode, industries) {
 }
 
 // 내 정보 - 백엔드 GET /me 응답으로 교체될 값
-// coins 기본값 50냥 → 투표(100냥)하려면 결제 필요 = 결제 플로우 시연 가능
 const MOCK_ME = {
-  coins: DEFAULT_COINS,
   // 내가 투표한 이력 (상가당 1건)
   voteHistory: [
     { vacancyId: 4, industry: "디저트 카페", addr: "포항시 북구 중앙동 5-2" },
@@ -201,7 +199,7 @@ async function fetchVacancies() {
   return res.json();
 }
 
-/** GET /me - 냥 잔액/투표 이력/쿠폰 */
+/** GET /me - 투표 이력/쿠폰 */
 async function fetchMe() {
   if (USE_MOCK_DATA) return MOCK_ME;
   const res = await fetch(`${API_BASE_URL}/me`);
@@ -209,23 +207,8 @@ async function fetchMe() {
   return res.json();
 }
 
-/** POST /payments - 1,000원 결제 → 100냥 충전 (응답: 갱신된 잔액) */
-async function postPayment() {
-  if (USE_MOCK_DATA) {
-    MOCK_ME.coins += COINS_PER_PAYMENT;
-    return { coins: MOCK_ME.coins };
-  }
-  const res = await fetch(`${API_BASE_URL}/payments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amountKrw: PAYMENT_KRW })
-  });
-  if (!res.ok) throw new Error("결제 실패: " + res.status);
-  return res.json();
-}
-
-/** POST /vacancies/:id/votes  body:{industry} - 투표, 100냥 차감
- *  응답: { votes: 갱신된 배열, coins: 차감 후 잔액 } */
+/** POST /vacancies/:id/votes  body:{industry} - 투표
+ *  응답: { votes: 갱신된 배열 } */
 async function postVote(vacancyId, industry) {
   if (USE_MOCK_DATA) {
     const v = MOCK_VACANCIES.find((x) => x.id === vacancyId);
@@ -236,8 +219,7 @@ async function postVote(vacancyId, industry) {
     }
     entry.count += 1;
     if (v.status === "empty") v.status = "voting";
-    MOCK_ME.coins -= VOTE_COST;
-    return { votes: v.votes, coins: MOCK_ME.coins };
+    return { votes: v.votes };
   }
   const res = await fetch(`${API_BASE_URL}/vacancies/${vacancyId}/votes`, {
     method: "POST",
@@ -262,7 +244,7 @@ async function postClaimCoupon(vacancyId) {
   return res.json();
 }
 
-/** POST /vacancies/:id/report - AI 창업 기회 리포트 생성, 50냥 차감
+/** POST /vacancies/:id/report - AI 창업 기회 리포트 생성
  *  (LLM 호출이라 수 초 걸림 - 프론트는 로딩 모달 표시 중) */
 async function postGenerateReport(vacancyId) {
   if (USE_MOCK_DATA) {
@@ -271,9 +253,7 @@ async function postGenerateReport(vacancyId) {
     const votes = [...v.votes].sort((a, b) => b.count - a.count);
     const top = votes[0] || { industry: "미정", count: 0 };
     const total = votes.reduce((s, x) => s + x.count, 0);
-    MOCK_ME.coins -= REPORT_COST;
     return {
-      coins: MOCK_ME.coins,
       recommendedIndustry: top.industry,
       fitScore: 82,
       waitingCustomers: top.count,
@@ -325,9 +305,7 @@ async function fetchNeighborhood() {
   };
 }
 
-/** POST /neighborhood/votes 대응 - 실제로는 POST /votes/batch(region_code+industry_ids).
- *  백엔드는 업종 1개당 1,000원(=100냥) 고정 차감이라 총액은 industries.length에 비례한다.
- *  냥 잔액 표시는 백엔드에 실제 유저 지갑(로그인 후순위)이 없어 목업 잔액에서만 차감한다. */
+/** POST /neighborhood/votes 대응 - 실제로는 POST /votes/batch(region_code+industry_ids). */
 async function postNeighborhoodVoteBatch(industries) {
   if (NEIGHBORHOOD_USE_MOCK) {
     industries.forEach((industry) => {
@@ -341,8 +319,7 @@ async function postNeighborhoodVoteBatch(industries) {
         MOCK_NEIGHBORHOOD.myVotes.push(industry);
       }
     });
-    MOCK_ME.coins -= VOTE_COST;
-    return { votes: MOCK_NEIGHBORHOOD.votes, coins: MOCK_ME.coins, myVotes: MOCK_NEIGHBORHOOD.myVotes };
+    return { votes: MOCK_NEIGHBORHOOD.votes, myVotes: MOCK_NEIGHBORHOOD.myVotes };
   }
 
   const allIndustries = await getIndustries();
@@ -373,18 +350,16 @@ async function postNeighborhoodVoteBatch(industries) {
   const demand = await demandRes.json();
   const votes = demand.ranking.map((r) => ({ industry: r.industry_name, count: r.vote_count }));
 
-  MOCK_ME.coins -= NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY * industries.length;
-  return { votes, coins: MOCK_ME.coins, myVotes: mergedMine };
+  return { votes, myVotes: mergedMine };
 }
 
-/** POST /neighborhood/report - 동네 전체 투표 데이터 기반 AI 창업 기회 리포트, 50냥 차감
+/** POST /neighborhood/report - 동네 전체 투표 데이터 기반 AI 창업 기회 리포트
  *  응답: { coins, neighborhoodName, candidates: [ {A/B/C공실 각각의 상세 정보} ] }
  *  candidates 각 필드의 source 값은 데이터 출처 표기용: "verified"(명당 검증) / "public"(공공 API) / "agent"(중개사 입력) */
 async function postNeighborhoodReport() {
   if (NEIGHBORHOOD_USE_MOCK) {
     await new Promise((r) => setTimeout(r, 2000)); // LLM 흉내
     const sorted = [...MOCK_NEIGHBORHOOD.votes].sort((a, b) => b.count - a.count);
-    MOCK_ME.coins -= REPORT_COST;
 
     const FIT_SCORES = [82, 74, 69];
     const ADDR_SAMPLES = [
@@ -447,7 +422,7 @@ async function postNeighborhoodReport() {
       };
     });
 
-    return { coins: MOCK_ME.coins, neighborhoodName: MOCK_NEIGHBORHOOD.name, candidates };
+    return { neighborhoodName: MOCK_NEIGHBORHOOD.name, candidates };
   }
   const regionCode = await getPrimaryRegionCode();
   const demandRes = await fetch(`${BACKEND_BASE_URL}/regions/${encodeURIComponent(regionCode)}/demand`);
@@ -472,8 +447,6 @@ async function postNeighborhoodReport() {
     reports.push(await res.json());
   }
   if (reports.length === 0) throw new Error("추천할 공실이 없어요.");
-
-  MOCK_ME.coins -= REPORT_COST; // 위 postNeighborhoodVoteBatch와 동일한 이유로 목업 잔액에서만 차감
 
   const candidates = reports.map((rep, i) => {
     const top = rep.vacancies[0];
@@ -515,5 +488,5 @@ async function postNeighborhoodReport() {
     };
   });
 
-  return { coins: MOCK_ME.coins, neighborhoodName: friendlyRegionName(regionCode), candidates };
+  return { neighborhoodName: friendlyRegionName(regionCode), candidates };
 }

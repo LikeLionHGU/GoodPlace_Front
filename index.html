@@ -10,11 +10,10 @@
 </head>
 <body>
 
-  <!-- 상단 바: 서비스명 + 냥 잔액/프로필 -->
+  <!-- 상단 바: 서비스명 + 프로필 -->
   <header id="topbar">
     <h1><img src="assets/logo.svg" alt="명당" /></h1>
     <div class="topbar-right">
-      <span id="coin-count"><img src="assets/icon-coin-ring.svg" alt="냥" /> 50냥</span>
       <img class="profile-icon" src="assets/profile.svg" alt="내 정보" title="내 정보" />
     </div>
   </header>
@@ -60,7 +59,7 @@
 
       <div class="panel-actions">
         <button id="btn-new-vote">새로운 업종 투표</button>
-        <button id="btn-report">AI레포트 생성 <small>(50냥)</small></button>
+        <button id="btn-report">AI레포트 생성</button>
       </div>
     </aside>
 
@@ -130,7 +129,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128499;</div>
         <h3>새로운 업종을 입력해주세요</h3>
-        <p class="modal-desc">투표하면 100냥이 차감됩니다.</p>
+        <p class="modal-desc">원하는 업종을 직접 적어 투표할 수 있어요.</p>
         <input type="text" id="new-industry-input" placeholder="ex. 김치찜, 삼겹살, 미용실" />
         <div class="modal-actions">
           <button data-close="modal-new-industry">취소</button>
@@ -144,7 +143,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128499;</div>
         <h3 id="vote-confirm-title">투표하시겠습니까?</h3>
-        <p class="modal-desc"><b>100냥</b>이 차감됩니다.<br/>가게가 생기면 쿠폰을 드려요. 불발 시 전액 환불!</p>
+        <p class="modal-desc">가게가 생기면 쿠폰을 드려요.</p>
         <div class="modal-actions">
           <button data-close="modal-vote-confirm">취소</button>
           <button class="primary" id="btn-vote-confirm-ok">투표</button>
@@ -157,25 +156,11 @@
       <div class="modal-card">
         <div class="target-icon-circle"><span class="target-icon-mask"></span></div>
         <h3>투자하기</h3>
-        <p class="modal-desc">보유: <b id="vs-confirm-current">0냥</b> · 필요: <b id="vs-confirm-need">100냥</b></p>
+        <p class="modal-desc">선택한 <b id="vs-confirm-count">0개</b> 업종에 투표할까요?</p>
         <div class="modal-actions">
           <button data-close="modal-vote-select-confirm">취소</button>
           <button class="primary" id="btn-vote-select-confirm-ok">투자하기</button>
         </div>
-      </div>
-    </div>
-
-    <!-- 냥 부족 → 결제 -->
-    <div class="modal-backdrop" id="modal-charge" hidden>
-      <div class="modal-card">
-        <div class="modal-icon">&#129689;</div>
-        <h3>냥이 부족해요</h3>
-        <p class="modal-desc">보유: <b id="charge-current">0냥</b> · 필요: <b id="charge-need">100냥</b><br/>1,000원 결제 시 <b>100냥</b>이 충전됩니다.</p>
-        <div class="modal-actions">
-          <button data-close="modal-charge">취소</button>
-          <button class="primary" id="btn-charge-ok">1,000원 결제하기</button>
-        </div>
-        <p class="source">지금은 모의 결제 - 실제 결제 연동은 추후</p>
       </div>
     </div>
 
@@ -184,7 +169,7 @@
       <div class="modal-card">
         <div class="modal-icon">&#128203;</div>
         <h3>레포트를 생성하시겠습니까?</h3>
-        <p class="modal-desc"><b>50냥</b>이 차감됩니다.<br/>이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
+        <p class="modal-desc">이 공실의 상권·투표 데이터를 바탕으로<br/>AI 창업 기회 리포트를 만들어요.</p>
         <div class="modal-actions">
           <button data-close="modal-report-confirm">취소</button>
           <button class="primary" id="btn-report-confirm-ok">생성</button>
@@ -227,11 +212,11 @@
   </main>
 
   <!-- 설정 → 인증 → 데이터 → 패널 UI → 지도 로직 순서로 로드 -->
-  <script src="js/config.js?v=28"></script>
-  <script src="js/auth.js?v=28"></script>
+  <script src="js/config.js?v=35"></script>
+  <script src="js/auth.js?v=35"></script>
   <script>requireLogin();</script>
-  <script src="js/vacancies.js?v=29"></script>
-  <script src="js/panel.js?v=32"></script>
+  <script src="js/vacancies.js?v=35"></script>
+  <script src="js/panel.js?v=35"></script>
   <script src="js/map.js?v=34"></script>
 
 </body>
