@@ -11,7 +11,7 @@ let afterCharge = null;      // 결제 완료 후 이어서 실행할 동작
 let neighborhood = null;     // 동네 현황 데이터 (fetchNeighborhood)
 let reportContext = "vacancy"; // "vacancy" | "neighborhood" - AI 리포트 생성 확인 모달이 어느 흐름에서 열렸는지
 let activeCategory = CATEGORY_TAXONOMY[0].key;  // 투표하기 패널에서 지금 보고 있는 대분류
-let selectedIndustries = new Set();             // 투표하기 패널에서 선택된 세부 업종들
+let selectedIndustry = null;                    // 투표하기 패널에서 선택된 세부 업종 (단일 선택)
 
 const panelEl = document.getElementById("vote-panel");
 const myPanelEl = document.getElementById("my-panel");
@@ -196,14 +196,14 @@ document.getElementById("btn-new-industry-ok").onclick = async () => {
   await doVote(industry);
 };
 
-// ---------- 헤더 "투표하기": 업종 카테고리/세부업종 다중 선택 ----------
+// ---------- 헤더 "투표하기": 업종 카테고리/세부업종 단일 선택 ----------
 function openVoteSelectPanel() {
   closeAllPanels();
-  selectedIndustries.clear();
+  selectedIndustry = null;
   activeCategory = CATEGORY_TAXONOMY[0].key;
   renderCategoryRow();
   renderSubcategoryGrid();
-  updateSelectedCount();
+  updateVoteFooterButtons();
   voteSelectPanelEl.hidden = false;
 }
 
@@ -240,50 +240,68 @@ function renderSubcategoryGrid() {
     const count = entry ? entry.count : 0;
     const iconSrc = SUBCATEGORY_ICONS[sub];
     const card = document.createElement("button");
-    card.className = "subcategory-card" + (selectedIndustries.has(sub) ? " selected" : "");
+    card.className = "subcategory-card" + (selectedIndustry === sub ? " selected" : "");
     card.innerHTML = `
       ${iconSrc ? `<span class="sub-icon" style="-webkit-mask-image:url(${iconSrc}); mask-image:url(${iconSrc})"></span>` : ""}
       <b>${sub}</b>
       <span class="sub-count">현재 ${count}표</span>
     `;
     card.onclick = () => {
-      if (selectedIndustries.has(sub)) selectedIndustries.delete(sub);
-      else selectedIndustries.add(sub);
+      selectedIndustry = selectedIndustry === sub ? null : sub;
       renderSubcategoryGrid();
-      updateSelectedCount();
+      updateVoteFooterButtons();
     };
     grid.appendChild(card);
   });
 }
 
-function updateSelectedCount() {
-  const n = selectedIndustries.size;
-  document.getElementById("selected-count").innerText = `${n}개 선택됨`;
-  document.getElementById("btn-submit-vote-select").disabled = n === 0;
+function updateVoteFooterButtons() {
+  const disabled = !selectedIndustry;
+  document.getElementById("btn-free-vote").disabled = disabled;
+  document.getElementById("btn-paid-vote").disabled = disabled;
 }
 
-document.getElementById("btn-submit-vote-select").onclick = () => {
-  if (selectedIndustries.size === 0) return;
-  // 실제 백엔드는 업종 1개당 100냥 고정 차감(1,000원) — 선택 개수에 비례해서 확인해야 한다.
-  const cost = NEIGHBORHOOD_VOTE_COST_PER_INDUSTRY * selectedIndustries.size;
-  if (needCharge(cost, () => document.getElementById("btn-submit-vote-select").onclick())) return;
-  document.getElementById("vs-confirm-current").innerText = `${me.coins}냥`;
-  document.getElementById("vs-confirm-need").innerText = `${cost}냥`;
+/** 무료 투표하기 (비용 없음, 확인 모달만 거침) */
+document.getElementById("btn-free-vote").onclick = () => {
+  if (!selectedIndustry) return;
+  document.getElementById("vs-confirm-title").innerText = `"${selectedIndustry}"에 투표하시겠습니까?`;
   openModal("modal-vote-select-confirm");
 };
 
 document.getElementById("btn-vote-select-confirm-ok").onclick = async () => {
   closeModal("modal-vote-select-confirm");
+  if (!selectedIndustry) return;
   try {
-    const r = await postNeighborhoodVoteBatch([...selectedIndustries]);
+    const r = await postNeighborhoodVoteBatch([selectedIndustry]);
     neighborhood.votes = r.votes;
     neighborhood.myVotes = r.myVotes;
-    me.coins = r.coins;
-    renderTopbar();
-    selectedIndustries.clear();
+    selectedIndustry = null;
     renderSubcategoryGrid();
-    updateSelectedCount();
+    updateVoteFooterButtons();
     alert("투표가 반영됐어요! 동네 현황에서 확인해보세요.");
+  } catch (err) {
+    console.error(err);
+    alert("투표 처리 중 오류가 발생했습니다.");
+  }
+};
+
+/** 10,000원 투표하기 (실결제, 냥과 무관 - 창업 확정 시 12,000원 업종 이용권으로 교환) */
+document.getElementById("btn-paid-vote").onclick = () => {
+  if (!selectedIndustry) return;
+  openModal("modal-paid-vote-confirm");
+};
+
+document.getElementById("btn-paid-vote-confirm-ok").onclick = async () => {
+  if (!selectedIndustry) return;
+  try {
+    const r = await postPaidVote(selectedIndustry);
+    neighborhood.votes = r.votes;
+    neighborhood.myVotes = r.myVotes;
+    closeModal("modal-paid-vote-confirm");
+    selectedIndustry = null;
+    renderSubcategoryGrid();
+    updateVoteFooterButtons();
+    alert("투표가 반영됐어요! 창업이 확정되면 12,000원 업종 이용권으로 교환돼요.");
   } catch (err) {
     console.error(err);
     alert("투표 처리 중 오류가 발생했습니다.");
